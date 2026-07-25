@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tabernacle-screw-v3';
+const CACHE_NAME = 'tabernacle-screw-v4';
 const STATIC_ASSETS = ['./', './index.html', './levels.js', './rules.js', './tts.js', './manifest.json', './tts/manifest.json'];
 
 self.addEventListener('install', (e) => {

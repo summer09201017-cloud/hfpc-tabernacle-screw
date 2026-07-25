@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { LEVELS } from '../levels.js';
-import { ttsKey } from '../tts.js';
+import { ttsKey, verseLine, toSpeakable } from '../tts.js';
 
 process.on('uncaughtException', (e) => {
   if (e && e.code === 'ENOENT' && e.syscall === 'unlink') return; // lib 的非同步二次刪除,無害
@@ -30,7 +30,7 @@ const VOICE = 'zh-TW-HsiaoChenNeural'; // 曉臻:HFPC 經文旁白慣例
 const HOWTO = '把橛子一根一根拔下來,放進下面的擔子。上面還有東西壓著的,要先把上面的拆掉。同一個擔子裝滿三根一樣顏色的,利未人就扛走了。';
 const LINES = [HOWTO];
 for (const l of LEVELS) {
-  LINES.push(`${l.ref}。${l.verse}`);
+  LINES.push(verseLine(l.ref, l.verse));   // 出處唸成「第四章第二十五節」,不是「4 點 25 分」
   LINES.push(l.hint);
 }
 
@@ -40,7 +40,8 @@ try { manifest = JSON.parse(readFileSync(manifestPath, 'utf8')); } catch { /* �
 const save = () => writeFileSync(manifestPath, JSON.stringify(manifest, null, 1) + '\n', 'utf8');
 
 let made = 0, skipped = 0, failed = 0;
-for (const text of LINES) {
+for (const raw of LINES) {
+  const text = toSpeakable(raw);   // 唸法轉換後才是「真正要唸的字串」
   const key = ttsKey(text);
   const file = `${key}.mp3`;
   const fp = join(OUT, file);

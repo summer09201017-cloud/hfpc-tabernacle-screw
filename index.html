@@ -140,7 +140,7 @@
 import { LEVELS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor } from './levels.js';
 import { indexLevel, initState, isExposed, exposedScrews, removeScrew, isWon, isStuck,
          cloneState, stateKey, BIN_SIZE } from './rules.js';
-import { speak, stopSpeak, voiceOn, setVoiceOn } from './tts.js';
+import { speak, stopSpeak, voiceOn, setVoiceOn, verseLine } from './tts.js';
 
 const $ = (id) => document.getElementById(id);
 const LS_DONE = 'tabernacle-screw-cleared';   // 已通關的關卡 id(陣列)
@@ -327,7 +327,7 @@ $('retry').onclick = () => load(li);
 $('hint').onclick = hint;
 $('toMap').onclick = showMap;
 $('next').onclick = () => load(Math.min(LEVELS.length - 1, li + 1));
-$('readVerse').onclick = () => speak(`${level.ref}。${level.verse}`);
+$('readVerse').onclick = () => speak(verseLine(level.ref, level.verse));
 $('voice').onclick = () => { setVoiceOn(!voiceOn()); paintVoiceBtn(); };
 $('unlock').onclick = () => { allUnlocked = !allUnlocked; save(); drawMap(); say2(allUnlocked ? '已全部解鎖(老師模式)。' : '回到照順序解鎖。'); };
 $('reset').onclick = () => { cleared.clear(); allUnlocked = false; save(); drawMap(); say2('進度清掉了,從第一站重新開始。'); };
