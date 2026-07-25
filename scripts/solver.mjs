@@ -9,7 +9,8 @@
 //   node scripts/solver.mjs             # lint + 逐關求解,任何一關不可解就 exit 1
 //   node scripts/solver.mjs --path      # 順便印出每關的一組通關順序
 //   node scripts/solver.mjs --level veil
-import { LEVELS, COLORS, AGE, binsFor } from '../levels.js';
+import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, binsFor } from '../levels.js';
+import { tightestSpacing, colorsOf, L } from '../layout.js';
 import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey } from '../rules.js';
 
 const args = process.argv.slice(2);
@@ -44,6 +45,11 @@ function lint(level) {
       errs.push(`板 ${b.id}(${b.label})沒有任何螺絲,永遠拆不掉`);
   }
   if (!level.ref || !level.verse) errs.push('缺經文出處或經文(本系列鐵則:每關都要有和合本經文)');
+  // ★ a11y:螺絲是固定 44px,手機上舞台約 350px → 中心間距低於 MIN_SPACING% 兩根就疊在一起
+  const sp = tightestSpacing(level);
+  if (sp.spacing < L.MIN_SPACING)
+    errs.push(`最近的兩根螺絲(${sp.pair[0].id} / ${sp.pair[1].id})只距 ${sp.spacing}%,低於 ${L.MIN_SPACING}%` +
+              `(手機上會疊在一起、孩子點不準)—— 這一柱太深或螺絲太多,改 columns`);
   return { errs, byColor };
 }
 
@@ -114,16 +120,34 @@ function difficulty(level, bins, runs = 400) {
   return { random: randomStuck / runs, greedy: greedyStuck / runs };
 }
 
-function difficultyVerdict({ random, greedy }) {
+// ★ 出廠標準(2026-07-25 加難度那輪重訂,取代舊的「>25% 就算太兇」):
+//   舊標準是在「會想 bot 全關 0% 卡死」的世界寫的,會把我們刻意瞄準的 20~30% 判成紅燈。
+//   量測後的分齡目標帶(scripts/tune-columns.mjs 用同一組數字挑關卡):
+//     青少年:會想 12~40% 卡死(想一下也可能失手)、而且躺平要 ≥25%(不動腦要有代價)
+//     兒童:會想 ≤25%(多一個擔子好轉身)   幼稚園:會想 ≤10%(幾乎不該卡)
+//   教學關(level.teaching)例外:它的任務是教規則,0% 卡死是對的。
+const BAND = {
+  teen:   { max: 0.40, min: 0.12, randMin: 0.25, why: '青少年' },
+  kids:   { max: 0.25, min: 0,    randMin: 0,    why: '兒童' },
+  kinder: { max: 0.10, min: 0,    randMin: 0,    why: '幼稚園' },
+};
+function difficultyVerdict(ageId, { random, greedy }, teaching) {
   const R = (random * 100).toFixed(0) + '%', G = (greedy * 100).toFixed(0) + '%';
   const line = `躺平 bot 卡死 ${R} / 會想 bot 卡死 ${G}`;
-  if (greedy > 0.25) return `🔴 ${line} —— 會想也常卡,對孩子太兇,建議加一個擔子或減一種顏色`;
-  if (random < 0.05) return `⚪ ${line} —— 亂拆也一定過,零挑戰(教學關可以,一般關太無聊)`;
-  if (random < 0.25) return `🟢 ${line} —— 好上手,適合前段關`;
-  return `🟢 ${line} —— 不動腦會卡、想一下就過,理想區間`;
+  const b = BAND[ageId] || BAND.kids;
+  if (teaching) return { ok: true, line: `⚪ ${line} —— 教學關(專心教規則,不該卡死)` };
+  if (greedy > b.max)
+    return { ok: false, line: `🔴 ${line} —— ${b.why}檔會想也常卡(上限 ${b.max * 100}%),加一個擔子或改 columns` };
+  if (greedy < b.min)
+    return { ok: false, line: `🟠 ${line} —— ${b.why}檔太簡單(想一下必勝,下限 ${b.min * 100}%),減一個擔子或把柱疊深` };
+  if (random < b.randMin)
+    return { ok: false, line: `🟠 ${line} —— 連亂拆都很少卡(躺平應 ≥${b.randMin * 100}%),這關沒在考驗次序` };
+  return { ok: true, line: `🟢 ${line} —— 落在${b.why}檔目標帶` };
 }
 
 let bad = 0;
+// ★ 排不下版面的關卡根本進不了 LEVELS(見 levels.js),不在這裡擋就會「少一關卻全綠」
+for (const e of LAYOUT_ERRORS) { bad++; console.log(`🔴 版面排不下:${e}`); }
 const levels = ONLY ? LEVELS.filter((l) => l.id === ONLY) : LEVELS;
 if (!levels.length) { console.log(`找不到關卡 ${ONLY}`); process.exit(1); }
 
@@ -144,7 +168,9 @@ for (const level of levels) {
     if (path) {
       console.log(`   🟢 ${tag} 保證可解(${path.length} 步 / 搜 ${nodes.toLocaleString()} 狀態)`);
       if (WANT_PATH) console.log(`      順序:${path.join(' → ')}`);
-      console.log(`      難度:${difficultyVerdict(difficulty(level, bins))}`);
+      const v = difficultyVerdict(age.id, difficulty(level, bins), level.teaching);
+      console.log(`      難度:${v.line}`);
+      if (!v.ok) bad++;                      // ★ 難度出帶也算出廠不合格(不只是印個字)
     } else if (budgetHit) {
       bad++;
       console.log(`   🟠 ${tag} 未知 —— 搜到上限 ${NODE_BUDGET.toLocaleString()} 仍無解,請簡化後重測`);

@@ -7,10 +7,11 @@
   "scripts": {
     "check": "node scripts/solver.mjs",
     "check:path": "node scripts/solver.mjs --path",
+    "tune": "node scripts/tune-columns.mjs",
     "serve": "npx --yes http-server -p 8099 -s",
     "test:browser": "node scripts/browser-test.mjs",
     "test": "npm run check && npm run check:must",
-    "check:must": "node \"C:/Users/agape250/.claude/skills/game-must-haves/scripts/check-must-haves.mjs\" ."
+    "check:must": "node scripts/check-must-haves.mjs"
   },
   "devDependencies": {
     "msedge-tts": "^2.0.7",

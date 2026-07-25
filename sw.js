@@ -1,5 +1,6 @@
-const CACHE_NAME = 'tabernacle-screw-v4';
-const STATIC_ASSETS = ['./', './index.html', './levels.js', './rules.js', './tts.js', './manifest.json', './tts/manifest.json'];
+// v5(2026-07-25 加難度那輪):新增 layout.js(幾何算式),index.html/levels.js 都改過
+const CACHE_NAME = 'tabernacle-screw-v5';
+const STATIC_ASSETS = ['./', './index.html', './levels.js', './layout.js', './rules.js', './tts.js', './manifest.json', './tts/manifest.json'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

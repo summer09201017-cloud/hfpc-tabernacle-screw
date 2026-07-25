@@ -26,14 +26,18 @@
   .verse{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);
     border-radius:8px;padding:9px 12px;font-size:14px;line-height:1.7}
   .verse b{color:var(--warn)}
-  .stage{position:relative;width:100%;aspect-ratio:1/1;background:#1c150f;
+  /* ★ 直式 3:4(不是美術偏好):正方形舞台在 44px 螺絲的最小間距下排不出 18 根橛子的關卡。
+     改這個比例要同時改 layout.js 的 STAGE_ASPECT,不然間距檢查會失準。 */
+  .stage{position:relative;width:100%;aspect-ratio:3/4;background:#1c150f;
     border:1px solid var(--line);border-radius:12px;overflow:hidden}
   /* 掉落:ease-in(越掉越快)才有重力感;直接線性或 ease-out 看起來像「被吸走」 */
+  /* ★ 標籤畫在「右下角」:同一柱的板往下錯開,露出來的是下緣那條帶子——
+     標籤放上面會被壓在上一片板底下,孩子看不到這片板叫什麼(經文教學就沒了)。 */
   .board{position:absolute;border-radius:7px;border:2px solid rgba(0,0,0,.45);
-    display:flex;align-items:flex-start;justify-content:flex-end;
+    display:flex;align-items:flex-end;justify-content:flex-end;
     transition:opacity .5s ease-in, transform .6s cubic-bezier(.55,.06,.9,.28)}
   .board .tag{font-size:11px;padding:2px 6px;color:#fff;background:rgba(0,0,0,.42);
-    border-radius:0 5px 0 7px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    border-radius:5px 0 5px 0;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   /* 拆完的板子掉出畫面外(不是原地消失):往下掉 170% + 微微翻轉 */
   .board.gone{opacity:0;transform:translateY(170%) rotate(11deg);pointer-events:none}
   /* 已經掉完的(重畫時)不要再演一次,直接就位 */
@@ -94,12 +98,24 @@
     <button class="btn sm" id="back">← 返回大廳</button>
   </header>
 
-  <!-- ── 關卡地圖(進站第一眼看到的畫面)── -->
-  <section id="mapScreen">
+  <!-- ── 年齡檔選單(第一眼看到的畫面;照 tsum 七款:先選檔位,再進地圖)── -->
+  <section id="ageScreen">
     <p class="verse"><b>民數記 1:51</b> 帳幕將往前行的時候,利未人要拆卸;將支搭的時候,利未人要豎起。</p>
-    <p class="msg" style="margin:4px 0 2px">先選年齡,再挑一站開始</p>
+    <p class="msg" style="margin:6px 0 2px">先選年齡檔 —— 擔子數不一樣,難度就不一樣</p>
     <div class="ages" id="ages"></div>
-    <div class="map" id="map" style="margin-top:6px"></div>
+    <p class="msg" style="font-size:12px">選好之後,可以在關卡地圖按「← 換年齡檔」再改。</p>
+  </section>
+
+  <!-- ── 關卡地圖 ── -->
+  <section id="mapScreen" hidden>
+    <p class="msg" id="mapHead" style="margin:2px 0 0;font-size:20px;font-weight:800;color:var(--ink)"></p>
+    <p class="msg" id="mapSub" style="margin:2px 0 6px"></p>
+    <div class="map" id="map"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary" id="cont"></button>
+      <span class="grow"></span>
+      <button class="btn sm" id="toAges">← 換年齡檔</button>
+    </div>
     <div class="row" style="margin-top:4px">
       <button class="btn sm" id="unlock">🔑 老師:全部解鎖</button>
       <span class="grow"></span>
@@ -137,33 +153,43 @@
 </dialog>
 
 <script type="module">
-import { LEVELS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor } from './levels.js';
+import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor } from './levels.js';
 import { indexLevel, initState, isExposed, exposedScrews, removeScrew, isWon, isStuck,
          cloneState, stateKey, BIN_SIZE } from './rules.js';
 import { speak, stopSpeak, voiceOn, setVoiceOn, verseLine } from './tts.js';
 
+// 有關卡排不下版面時,寧可讓老師當場看到紅字,也不要無聲少一關
+if (LAYOUT_ERRORS.length) document.body.insertAdjacentHTML('afterbegin',
+  `<div class="verse" style="border-left-color:#c1443a">⚠ 有 ${LAYOUT_ERRORS.length} 關的版面排不下,` +
+  `這一關暫時不會出現在關卡地圖。請跑 <b>npm run check</b> 看詳情。<br><small>${LAYOUT_ERRORS.join('<br>')}</small></div>`);
+
 const $ = (id) => document.getElementById(id);
 const LS_DONE = 'tabernacle-screw-cleared';   // 已通關的關卡 id(陣列)
 const LS_UNLOCK = 'tabernacle-screw-unlock';  // 老師全部解鎖
+const LS_STARS = 'tabernacle-screw-stars';    // 每站幾顆星(照 tsum 七款:地圖上看得到 ★★★)
 const HOWTO = '把橛子一根一根拔下來,放進下面的擔子。上面還有東西壓著的,要先把上面的拆掉。同一個擔子裝滿三根一樣顏色的,利未人就扛走了。';
 
-let ageId = 'kids', cleared = new Set(), allUnlocked = false;
+let ageId = 'kids', cleared = new Set(), allUnlocked = false, stars = {};
 let li = 0, level, idx, state, hintId = null, howtoSpoken = false, fallingId = null;
+// 這一次挑戰用了幾次提示、重來幾次 → 決定星星(從地圖進站時歸零,按「重來」不歸零)
+let attempt = { hints: 0, retries: 0 };
 
 try { ageId = AGE[localStorage.getItem(AGE_PREF_KEY)] ? localStorage.getItem(AGE_PREF_KEY) : 'kids'; } catch { /* 私密模式 */ }
 try { cleared = new Set(JSON.parse(localStorage.getItem(LS_DONE) || '[]')); } catch { cleared = new Set(); }
 try { allUnlocked = localStorage.getItem(LS_UNLOCK) === '1'; } catch { allUnlocked = false; }
+try { stars = JSON.parse(localStorage.getItem(LS_STARS) || '{}'); } catch { stars = {}; }
 
 const save = () => { try {
   localStorage.setItem(LS_DONE, JSON.stringify([...cleared]));
   localStorage.setItem(LS_UNLOCK, allUnlocked ? '1' : '0');
+  localStorage.setItem(LS_STARS, JSON.stringify(stars));
 } catch { /* 私密模式:玩得動,只是不記得 */ } };
 
 // 解鎖規則:第一站永遠開;通關過的開;通關過的下一站開;老師模式全開
 const unlocked = (i) => allUnlocked || i === 0 || cleared.has(LEVELS[i].id) ||
   (i > 0 && cleared.has(LEVELS[i - 1].id));
 
-// ── 關卡地圖 ──
+// ── 年齡檔選單(照 tsum 七款:獨立的第一個畫面,選完才進地圖)──
 function drawAges() {
   $('ages').innerHTML = Object.values(AGE).map((a) => `
     <button class="age${a.id === ageId ? ' on' : ''}" data-age="${a.id}">
@@ -173,42 +199,62 @@ function drawAges() {
     b.onclick = () => {
       ageId = b.dataset.age;
       try { localStorage.setItem(AGE_PREF_KEY, ageId); } catch { /* noop */ }
-      drawAges(); drawMap();
+      drawAges(); showMap();
     };
   });
 }
 
+// ── 關卡地圖(照 tsum 七款:🗺 標題 + 走到第幾站 + 蛇行節點 + ★★★ + ▶繼續)──
+/** 最遠可以玩的那一站(index) */
+const furthest = () => { let n = 0; for (let i = 0; i < LEVELS.length; i++) if (unlocked(i)) n = i; return n; };
+
 function drawMap() {
+  const a = getAge(ageId);
+  $('mapHead').textContent = '🗺 關卡地圖';
+  $('mapSub').textContent = `${a.emoji} ${a.label}・已走到第 ${furthest() + 1} 站`;
   $('map').innerHTML = LEVELS.map((l, i) => {
-    const done = cleared.has(l.id), open = unlocked(i);
-    const mark = done ? '⭐' : open ? String(i + 1) : '🔒';
+    const done = cleared.has(l.id), open = unlocked(i), st = stars[l.id] | 0;
+    const mark = open ? String(i + 1) : '🔒';
+    // 星星:玩過的站可以重玩拿星星(不用提示、不重來 = ★★★)
+    const starTxt = st ? '★★★'.slice(0, st) + '☆☆☆'.slice(0, 3 - st) : (open ? '☆☆☆' : '');
     return `<button class="node${done ? ' cleared' : ''}${open ? '' : ' locked'}" data-i="${i}">
       <span class="no">${mark}</span>
       <span class="t"><b>${l.name}</b>
         <small>${l.ref}・${l.screws.length} 根橛子・擔子 ${binsFor(l, ageId)} 個${done ? '・已拆完' : open ? '' : '・先拆完上一站'}</small>
+        <small style="color:#ffd54a;letter-spacing:2px">${starTxt}</small>
       </span></button>`;
   }).join('');
   $('map').querySelectorAll('[data-i]').forEach((b) => {
     const i = +b.dataset.i;
     b.onclick = () => { if (unlocked(i)) load(i); else say2('先把上一站拆完,或請老師按「全部解鎖」。'); };
   });
+  $('cont').textContent = `▶ 繼續:第 ${furthest() + 1} 站`;
 }
 
-function say2(t) { const m = $('mapScreen').querySelector('.msg'); m.textContent = t; }
+function say2(t) { $('mapSub').textContent = t; }
+
+function showAges() {
+  stopSpeak();
+  $('ageScreen').hidden = false; $('mapScreen').hidden = true; $('gameScreen').hidden = true;
+  $('title').textContent = '🪛 會幕拆卸';
+  drawAges();
+}
 
 function showMap() {
   stopSpeak();
-  $('mapScreen').hidden = false; $('gameScreen').hidden = true;
+  $('ageScreen').hidden = true; $('mapScreen').hidden = false; $('gameScreen').hidden = true;
   $('title').textContent = '🪛 會幕拆卸';
-  drawAges(); drawMap();
+  drawMap();
 }
 
 // ── 遊戲 ──
-function load(i) {
+/** fresh=true(從地圖/下一站進來)才把星星計數歸零;按「重來這關」不歸零(重來要付代價) */
+function load(i, fresh = true) {
+  if (fresh) attempt = { hints: 0, retries: 0 };
   li = i; level = LEVELS[i]; idx = indexLevel(level);
   state = initState(level, binsFor(level, ageId));
   hintId = null; fallingId = null;
-  $('mapScreen').hidden = true; $('gameScreen').hidden = false;
+  $('ageScreen').hidden = true; $('mapScreen').hidden = true; $('gameScreen').hidden = false;
   $('title').textContent = level.name;
   $('ref').textContent = level.ref;
   $('verse').textContent = level.verse;
@@ -280,9 +326,18 @@ function tap(id, open) {
 }
 
 function win() {
-  cleared.add(level.id); save();
+  cleared.add(level.id);
+  // ★ 星星(照 tsum 七款在地圖上顯示):不用提示、不重來 = ★★★,每用一次扣一顆,最少 1 顆。
+  //   只往上記錄,重玩拿到更多顆才覆蓋(tsum 的「重玩拿星星」)。
+  const got = Math.max(1, 3 - attempt.hints - attempt.retries);
+  const best = Math.max(stars[level.id] | 0, got);
+  const better = best > (stars[level.id] | 0);
+  stars[level.id] = best;
+  save();
   ping(`${SITE}-done`);
-  if (li + 1 < LEVELS.length) { say('拆完了!利未人把它扛上路。', 'good'); $('next').style.display = ''; }
+  const starLine = ` ${'★'.repeat(got)}${'☆'.repeat(3 - got)}` +
+    (got < 3 ? '(不用提示、不重來就能拿三顆星)' : '') + (better ? '' : '(之前拿過更多顆,保留最好的)');
+  if (li + 1 < LEVELS.length) { say('拆完了!利未人把它扛上路。' + starLine, 'good'); $('next').style.display = ''; }
   else {
     say('全部拆完了 —— 會幕上路了。', 'good');
     show(`<h2 style="margin:0 0 8px">🎉 六站全部拆完</h2>
@@ -314,7 +369,8 @@ function hint() {
     const nx = cloneState(state);
     if (!removeScrew(idx, nx, id).ok) continue;
     n = 0; seen.clear();
-    if (dfs(nx)) { hintId = id; draw(); say('白框那根,拆它就對了。', ''); speak(level.hint); return; }
+    if (dfs(nx)) { hintId = id; attempt.hints++; draw();
+      say('白框那根,拆它就對了。(用提示會少一顆星)', ''); speak(level.hint); return; }
   }
   say('這局已經沒有救了,按「↻ 重來這關」。', 'bad');
 }
@@ -323,14 +379,16 @@ function show(html) { $('dlgBody').innerHTML = html; $('dlg').showModal(); }
 function paintVoiceBtn() { const b = $('voice'); const on = voiceOn(); b.textContent = on ? '🔊' : '🔇'; b.classList.toggle('on', on); }
 
 $('dlgOk').onclick = () => $('dlg').close();
-$('retry').onclick = () => load(li);
+$('retry').onclick = () => { attempt.retries++; load(li, false); };   // 重來要付星星的代價
 $('hint').onclick = hint;
 $('toMap').onclick = showMap;
+$('toAges').onclick = showAges;
+$('cont').onclick = () => load(furthest());
 $('next').onclick = () => load(Math.min(LEVELS.length - 1, li + 1));
 $('readVerse').onclick = () => speak(verseLine(level.ref, level.verse));
 $('voice').onclick = () => { setVoiceOn(!voiceOn()); paintVoiceBtn(); };
 $('unlock').onclick = () => { allUnlocked = !allUnlocked; save(); drawMap(); say2(allUnlocked ? '已全部解鎖(老師模式)。' : '回到照順序解鎖。'); };
-$('reset').onclick = () => { cleared.clear(); allUnlocked = false; save(); drawMap(); say2('進度清掉了,從第一站重新開始。'); };
+$('reset').onclick = () => { cleared.clear(); stars = {}; allUnlocked = false; save(); drawMap(); say2('進度與星星都清掉了,從第一站重新開始。'); };
 $('back').onclick = () => { location.href = 'https://hfpc-bible-games.summer09201017.workers.dev/'; };
 
 // ── play-stats 匿名計數(遊戲層零個資)──
@@ -358,7 +416,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 
 paintVoiceBtn();
-showMap();   // ★ 進站第一眼=關卡地圖,看得到第一站
+showAges();  // ★ 照 tsum 七款:進站第一眼=年齡檔選單(教室裡換一個孩子就換一檔),選完進地圖
 </script>
 </body>
 </html>
