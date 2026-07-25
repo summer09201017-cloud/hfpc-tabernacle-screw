@@ -9,7 +9,7 @@
 //   node scripts/solver.mjs             # lint + 逐關求解,任何一關不可解就 exit 1
 //   node scripts/solver.mjs --path      # 順便印出每關的一組通關順序
 //   node scripts/solver.mjs --level veil
-import { LEVELS, COLORS } from '../levels.js';
+import { LEVELS, COLORS, AGE, binsFor } from '../levels.js';
 import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey } from '../rules.js';
 
 const args = process.argv.slice(2);
@@ -48,7 +48,7 @@ function lint(level) {
 }
 
 // ── solver:DFS + 記憶化,窮舉「先拔哪一根」的所有順序 ──
-function solve(level) {
+function solve(level, bins) {
   const idx = indexLevel(level);
   const seen = new Set();
   let nodes = 0, budgetHit = false;
@@ -69,7 +69,7 @@ function solve(level) {
     return null;
   }
 
-  const path = dfs(initState(level), []);
+  const path = dfs(initState(level, bins), []);
   return { path, nodes, budgetHit };
 }
 
@@ -82,8 +82,8 @@ function solve(level) {
 //                    → 逼近「一個會想一下的孩子」
 // ★ 只看 random 會系統性高估難度(第一版就是這樣把 55% 誤判成「太緊」)。
 //   真正的出廠標準是:會想 bot 幾乎一定過(不勸退),而躺平 bot 會吃到苦頭(有挑戰)。
-function playout(level, idx, pickFn) {
-  const st = initState(level);
+function playout(level, idx, pickFn, bins) {
+  const st = initState(level, bins);
   for (;;) {
     if (isWon(st)) return true;
     const ex = exposedScrews(idx, st);
@@ -93,14 +93,14 @@ function playout(level, idx, pickFn) {
   }
 }
 
-function difficulty(level, runs = 400) {
+function difficulty(level, bins, runs = 400) {
   const idx = indexLevel(level);
   let seed = 20260725; // 固定種子:每次跑同一組數字,才能當迴歸基準
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
 
   let randomStuck = 0;
   for (let r = 0; r < runs; r++)
-    if (!playout(level, idx, (ex) => ex[Math.floor(rnd() * ex.length) % ex.length])) randomStuck++;
+    if (!playout(level, idx, (ex) => ex[Math.floor(rnd() * ex.length) % ex.length], bins)) randomStuck++;
 
   let greedyStuck = 0;
   for (let r = 0; r < runs; r++) {
@@ -108,7 +108,7 @@ function difficulty(level, runs = 400) {
       const open = ex.filter((id) => st.bins.some((b) => b && b.color === idx.screw.get(id).color));
       const pool = open.length ? open : ex;
       return pool[Math.floor(rnd() * pool.length) % pool.length];
-    });
+    }, bins);
     if (!ok) greedyStuck++;
   }
   return { random: randomStuck / runs, greedy: greedyStuck / runs };
@@ -136,17 +136,22 @@ for (const level of levels) {
   if (errs.length) { bad++; errs.forEach((e) => console.log(`   🔴 lint:${e}`)); continue; }
   console.log('   🟢 lint 通過(顏色都是 3 的倍數、螺絲都在板上、經文齊)');
 
-  const { path, nodes, budgetHit } = solve(level);
-  if (path) {
-    console.log(`   🟢 保證可解 —— 找到 ${path.length} 步通關順序(搜了 ${nodes.toLocaleString()} 個狀態)`);
-    if (WANT_PATH) console.log(`      順序:${path.join(' → ')}`);
-    console.log(`   難度(各 400 場):${difficultyVerdict(difficulty(level))}`);
-  } else if (budgetHit) {
-    bad++;
-    console.log(`   🟠 未知 —— 搜到上限 ${NODE_BUDGET.toLocaleString()} 個狀態仍沒找到解;這關太大或太緊,請簡化後重測`);
-  } else {
-    bad++;
-    console.log(`   🔴 不可解 —— 窮舉 ${nodes.toLocaleString()} 個狀態,沒有任何拆卸順序能通關。不准收進關卡表!`);
+  // ★ 三個年齡檔各驗一次:孩子選哪一檔都不能卡死(擔子數不同=完全不同的局)
+  for (const age of Object.values(AGE)) {
+    const bins = binsFor(level, age.id);
+    const { path, nodes, budgetHit } = solve(level, bins);
+    const tag = `${age.emoji} ${age.label}(擔子 ${bins})`;
+    if (path) {
+      console.log(`   🟢 ${tag} 保證可解(${path.length} 步 / 搜 ${nodes.toLocaleString()} 狀態)`);
+      if (WANT_PATH) console.log(`      順序:${path.join(' → ')}`);
+      console.log(`      難度:${difficultyVerdict(difficulty(level, bins))}`);
+    } else if (budgetHit) {
+      bad++;
+      console.log(`   🟠 ${tag} 未知 —— 搜到上限 ${NODE_BUDGET.toLocaleString()} 仍無解,請簡化後重測`);
+    } else {
+      bad++;
+      console.log(`   🔴 ${tag} 不可解 —— 窮舉 ${nodes.toLocaleString()} 狀態無解。不准收進關卡表!`);
+    }
   }
   console.log('');
 }
