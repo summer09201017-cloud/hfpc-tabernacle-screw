@@ -7,7 +7,7 @@
   "scripts": {
     "check": "node scripts/solver.mjs",
     "check:path": "node scripts/solver.mjs --path",
-    "tune": "node scripts/tune-columns.mjs",
+    "tune": "node scripts/gen-pile.mjs",
     "serve": "npx --yes http-server -p 8099 -s",
     "test:browser": "node scripts/browser-test.mjs",
     "test": "npm run check && npm run check:must",

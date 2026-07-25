@@ -11,6 +11,7 @@
 //   node scripts/solver.mjs --level veil
 import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, binsFor } from '../levels.js';
 import { tightestSpacing, colorsOf, L } from '../layout.js';
+import { pointInPoly } from '../rules.js';
 import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey } from '../rules.js';
 
 const args = process.argv.slice(2);
@@ -30,9 +31,10 @@ function lint(level) {
     if (!COLORS[s.color]) errs.push(`未知顏色:${s.color}(${s.id})`);
     const b = level.boards.find((x) => x.id === s.board);
     if (!b) { errs.push(`螺絲 ${s.id} 指向不存在的板 ${s.board}`); continue; }
-    // 螺絲必須落在自己那片板子裡,否則畫面上會浮在半空、玩家點不到
-    if (s.x < b.x || s.x > b.x + b.w || s.y < b.y || s.y > b.y + b.h)
-      errs.push(`螺絲 ${s.id} 不在板 ${b.id}(${b.label})範圍內`);
+    // 螺絲必須落在自己那片板的**真形狀**裡(v2 是多邊形),否則畫面上浮在半空、玩家點不到
+    const onIt = b.poly ? pointInPoly(s.x, s.y, b.poly)
+      : s.x >= b.x && s.x <= b.x + b.w && s.y >= b.y && s.y <= b.y + b.h;
+    if (!onIt) errs.push(`螺絲 ${s.id} 不在板 ${b.id}(${b.label})的形狀內`);
   }
   // ★ 鐵則:每種顏色都要是 3 的倍數,否則一定有湊不滿的殘留 → 必卡死
   for (const [c, n] of Object.entries(byColor))

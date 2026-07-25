@@ -12,10 +12,15 @@
 - 部署一律 `node scripts/build-dist.mjs` 再 `wrangler pages deploy dist`(白名單制)。
   ★ 不要 deploy 專案根目錄:那會把 `scripts/` 一起送上 CDN;
   **Pages 不吃 `.assetsignore`**(那是 Workers assets 的功能)。
-- 難度:幾何改由 `layout.js` 依「疊柱規格」算出來(手擺座標擺不出真遮擋 → 第一版會想 bot 全關 0% 卡死)。
-  現況青少年檔會想 bot 卡死:站1 教學 0% · 站2 23% · 站3 20% · 站4 19% · 站5 26% · 站6 31%。
-  ⚠ 改 `columns` / `bins` 就是改難度,改完必跑 `npm run check`(難度出帶會 exit 1)。
-  要重新挑分法用 `npm run tune`(窮舉分法 × 擔子數,並硬篩可解性、a11y 間距、神學次序)。
+- 版面 v2「中央堆疊」(07-26 使用者拍板):板件=不規則多邊形、全部疊在舞台中間,
+  **遮擋判定照真形狀**(`rules.js pointInPoly`),畫的形狀與判定形狀是同一份多邊形。
+  佈局存在 `levels.js` 的 ⟪PILES⟫ 區段,由 `npm run tune`(scripts/gen-pile.mjs)隨機搜尋 +
+  兩隻 bot 量測到分齡目標帶才寫入——⚠ 手改 PILES 無效,重跑會覆蓋;改難度請調 `bins`/`under` 再重生。
+  現況青少年檔會想 bot 卡死:站1 教學 0% · 站2 23% · 站3 24% · 站4 16% · 站5 15% · 站6 25%。
+  改完任何關卡資料必跑 `npm run check`(難度出帶、間距不足、螺絲浮空都會 exit 1)。
+- 音效+BGM:`audio.js`(零音檔 Web Audio)。BGM 曲庫制:曲子由(站名,關卡id)雜湊決定,
+  每一關不同曲、同一關永遠同一曲;音高/音量是 AnalyserNode 量出來的(手機喇叭放不出 500Hz 以下)。
+- 📊 使用統計連結只放 6 個大廳入口(使用者拍板 07-26),遊戲頁尾不放。
 
 ## 玩法規則(只有一份:`rules.js`)
 

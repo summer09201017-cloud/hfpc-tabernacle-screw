@@ -8,24 +8,55 @@
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#2b2118">
 <style>
+  /* ★ 2026-07-26 可愛風改版(使用者點名「太醜、不可愛」,參考雅各的斑點羊):
+     柔和天空→草地的背景 + 太陽、羊皮紙卡片、抹茶綠圓角大按鈕、深棕文字。
+     遊戲舞台(.stage)保留深色——材質(細麻/海狗皮/包金板)是對著深底調的,像從門口看進會幕。 */
   :root{
-    --bg:#241c14; --panel:#33281d; --ink:#f4ead9; --dim:#c3b298; --line:#4d3c2b; --warn:#d08a2c;
+    --panel:#fdf3da; --ink:#4a3a20; --dim:#8a7a58; --line:#e0cb9a; --warn:#c07f28;
+    --grass:#a5d283; --grass2:#5a7d3d;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
+  body{margin:0;color:var(--ink);
+    background:linear-gradient(180deg,#bfe0f5 0%,#d8ecda 46%,#a5d283 78%,#8fc46e 100%);
+    background-attachment:fixed;
     font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-text-size-adjust:100%}
-  .wrap{max-width:720px;margin:0 auto;padding:10px 12px 28px;min-height:100dvh;display:flex;flex-direction:column;gap:10px}
+  body::before{ /* 太陽 */
+    content:"";position:fixed;top:26px;left:18px;width:64px;height:64px;border-radius:50%;
+    background:radial-gradient(circle at 40% 38%,#ffe9a3,#ffd257 62%,rgba(255,210,87,0) 72%);
+    filter:blur(.4px);pointer-events:none}
+  body::after{ /* 雲 */
+    content:"";position:fixed;top:44px;right:12%;width:88px;height:26px;border-radius:99px;background:#fff;opacity:.85;
+    box-shadow:26px 10px 0 6px #fff, -30px 8px 0 2px #fff, 46vw 30px 0 0 rgba(255,255,255,.9);pointer-events:none}
+  .wrap{max-width:720px;margin:0 auto;padding:10px 12px 28px;min-height:100dvh;display:flex;flex-direction:column;gap:10px;position:relative;z-index:1}
   header{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  h1{font-size:17px;margin:0;flex:1;min-width:130px}
-  .btn{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;
-    padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;min-height:44px}
-  .btn:active{transform:translateY(1px)}
-  .btn.primary{background:#6b4f2e;border-color:#8a6a42}
-  .btn.on{background:#6b4f2e;border-color:var(--warn)}
+  h1{font-size:18px;margin:0;flex:1;min-width:130px;color:#4a3a20;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+  .btn{background:var(--panel);color:var(--ink);border:2px solid var(--line);border-radius:14px;
+    padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;min-height:44px;
+    box-shadow:0 2px 0 rgba(90,80,50,.18)}
+  .btn:active{transform:translateY(1px);box-shadow:none}
+  .btn.primary{background:var(--grass);border-color:var(--grass2);color:#2e451c}
+  .btn.on{background:#ffe9b0;border-color:var(--warn)}
   .btn.sm{padding:8px 12px;font-size:13px;min-height:40px}
-  .verse{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);
-    border-radius:8px;padding:9px 12px;font-size:14px;line-height:1.7}
+  /* 羊皮紙卡片(斑點羊同款味道) */
+  .card{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:14px;
+    box-shadow:0 3px 10px rgba(90,70,30,.15)}
+  .verse{background:#fffaf0;border:1px solid var(--line);border-left:4px solid var(--warn);
+    border-radius:10px;padding:9px 12px;font-size:14px;line-height:1.7}
   .verse b{color:var(--warn)}
+  /* 圓萌吉祥物列:五色橛子臉(呼應遊戲裡的橛子,tsum 式圓臉) */
+  .mascots{display:flex;justify-content:center;gap:14px;padding:6px 0 2px}
+  .mascots i{width:46px;height:46px;border-radius:50%;position:relative;display:inline-block;
+    border:2px solid rgba(0,0,0,.25);box-shadow:inset -4px -6px 0 rgba(0,0,0,.12),0 2px 3px rgba(60,40,10,.25);
+    animation:bob 2.6s ease-in-out infinite}
+  .mascots i:nth-child(2){animation-delay:.3s} .mascots i:nth-child(3){animation-delay:.6s}
+  .mascots i:nth-child(4){animation-delay:.9s} .mascots i:nth-child(5){animation-delay:1.2s}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .mascots i::before{ /* 眼睛 */
+    content:"";position:absolute;top:16px;left:11px;width:6px;height:7px;border-radius:50%;background:#3a2a14;
+    box-shadow:18px 0 0 #3a2a14}
+  .mascots i::after{ /* 微笑 */
+    content:"";position:absolute;top:26px;left:17px;width:12px;height:7px;border-radius:0 0 12px 12px;
+    border:2.5px solid #3a2a14;border-top:0}
   /* ★ 直式 3:4(不是美術偏好):正方形舞台在 44px 螺絲的最小間距下排不出 18 根橛子的關卡。
      改這個比例要同時改 layout.js 的 STAGE_ASPECT,不然間距檢查會失準。 */
   .stage{position:relative;width:100%;aspect-ratio:3/4;background:#1c150f;
@@ -46,15 +77,7 @@
      transform-origin 放底部,晃起來像被一根釘子吊著;reduced-motion 會關掉。 */
   @keyframes wobbleLoose{0%,100%{transform:rotate(-.9deg)}50%{transform:rotate(.9deg)}}
   .board.loose{animation:wobbleLoose .85s ease-in-out infinite;transform-origin:50% 100%}
-  /* 形狀提示:板件在畫面上是同尺寸矩形(遮擋深度與螺絲間距靠這個保證),
-     所以「各材料不同形狀」用內襯畫出來——柱子細長、座矮胖、閂橫長、繩子細帶。
-     只動內襯不動矩形,才不會破壞已經量測過的難度與 a11y 間距。 */
-  .board .shape{position:absolute;background:rgba(0,0,0,.2);border-radius:8px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.16);pointer-events:none}
-  .board .shape.pillar{left:33%;right:33%;top:4%;bottom:4%}
-  .board .shape.base{left:6%;right:6%;bottom:6%;height:34%}
-  .board .shape.bar{left:4%;right:4%;top:39%;height:22%}
-  .board .shape.rope{left:4%;right:4%;top:44%;height:12%;border-radius:99px}
+  /* (v2 之後形體就是多邊形本身:柱=細長多邊形、閂=橫長、獸皮=隆起輪廓——不再需要內襯) */
   /* 44px:孩子用平板點得到的最小尺寸(a11y 觸控目標鐵則) */
   .screw{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
     border:2px solid rgba(0,0,0,.5);cursor:pointer;padding:0;
@@ -78,28 +101,37 @@
   .msg.bad{color:#e2895f} .msg.good{color:#8ed49b}
   .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
   .legend i{width:12px;height:12px;border-radius:50%;display:inline-block;vertical-align:-1px;margin-right:3px}
-  /* 關卡地圖:蛇行節點 */
+  /* 關卡地圖:蛇行節點(斑點羊風:白底圓卡 + 抹茶綠圓號碼) */
   .map{display:flex;flex-direction:column;gap:10px}
-  .node{display:flex;align-items:center;gap:12px;background:var(--panel);border:2px solid var(--line);
-    border-radius:14px;padding:12px 14px;cursor:pointer;text-align:left;color:var(--ink);
-    font-family:inherit;min-height:66px;width:100%}
+  .node{display:flex;align-items:center;gap:12px;background:#fffdf6;border:2px solid var(--line);
+    border-radius:18px;padding:12px 14px;cursor:pointer;text-align:left;color:var(--ink);
+    font-family:inherit;min-height:66px;width:100%;box-shadow:0 2px 6px rgba(90,70,30,.12)}
   .node:nth-child(even){flex-direction:row-reverse;text-align:right}
-  .node.locked{opacity:.5}
-  .node.cleared{border-color:#6b8f5a}
-  .node .no{width:40px;height:40px;border-radius:50%;background:#1c150f;display:grid;place-items:center;
-    font-size:18px;font-weight:800;flex:0 0 auto;border:2px solid var(--line)}
+  .node.locked{opacity:.55;background:#f3ecd8;box-shadow:none}
+  .node.cleared{border-color:var(--grass2);background:#f4fae9}
+  .node .no{width:44px;height:44px;border-radius:50%;background:var(--grass);color:#2e451c;display:grid;place-items:center;
+    font-size:19px;font-weight:800;flex:0 0 auto;border:2px solid var(--grass2)}
+  .node.locked .no{background:#e5dcc2;border-color:#c9bd9a;color:#8a7a58}
   .node .t{flex:1;min-width:0}
   .node .t b{display:block;font-size:16px}
   .node .t small{color:var(--dim);font-size:12px}
-  .ages{display:flex;gap:8px;flex-wrap:wrap}
-  .age{flex:1;min-width:98px;background:var(--panel);border:2px solid var(--line);border-radius:12px;
-    padding:10px;cursor:pointer;color:var(--ink);font-family:inherit;min-height:64px}
-  .age.on{border-color:var(--warn);background:#4a3722}
-  .age b{display:block;font-size:15px}
-  .age small{color:var(--dim);font-size:11px;line-height:1.4;display:block;margin-top:2px}
-  dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;
+  /* 年齡三檔:抹茶綠大按鈕、短標籤(斑點羊同款「幼/童/青」) */
+  .ages{display:flex;gap:10px;flex-wrap:wrap}
+  .age{flex:1;min-width:98px;background:var(--grass);border:2px solid var(--grass2);border-radius:16px;
+    padding:12px 10px;cursor:pointer;color:#2e451c;font-family:inherit;min-height:76px;text-align:center;
+    box-shadow:0 3px 0 rgba(70,100,40,.35);transition:transform .12s ease}
+  .age:active{transform:translateY(2px);box-shadow:none}
+  .age.on{background:#ffe9b0;border-color:var(--warn);color:#6b4a12;box-shadow:0 3px 0 rgba(160,110,30,.35)}
+  .age b{display:block;font-size:19px}
+  .age small{color:inherit;opacity:.85;font-size:11px;line-height:1.4;display:block;margin-top:3px}
+  dialog{background:var(--panel);color:var(--ink);border:2px solid var(--line);border-radius:18px;
     max-width:420px;padding:20px;line-height:1.8}
-  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog::backdrop{background:rgba(60,45,20,.45)}
+  /* ── 不規則板形 v2(使用者拍板:全部疊在中間、遮擋也照真形狀)──
+     每片板的多邊形存在 levels.js 的 PILES(gen-pile.mjs 量測過難度才收);
+     .skin 的 clip-path 由 JS 從**同一份多邊形**算出來 → 畫的形狀=遮擋判定的形狀,零落差。 */
+  .board .skin{position:absolute;inset:0;pointer-events:none;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.28)}
   @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
 </style>
 </head>
@@ -107,20 +139,30 @@
 <div class="wrap">
   <header>
     <h1 id="title">🪛 會幕拆卸</h1>
+    <button class="btn sm" id="bgm" title="開關音樂與音效">🎵</button>
     <button class="btn sm" id="voice" title="開關朗讀">🔊</button>
     <button class="btn sm" id="back">← 返回大廳</button>
   </header>
 
-  <!-- ── 年齡檔選單(第一眼看到的畫面;照 tsum 七款:先選檔位,再進地圖)── -->
-  <section id="ageScreen">
+  <!-- ── 年齡檔選單(第一眼看到的畫面;照 tsum 七款:先選檔位,再進地圖;可愛風照斑點羊)── -->
+  <section id="ageScreen" class="card">
+    <p class="msg" style="margin:0;font-size:22px;font-weight:800;color:var(--ink)">⛺ 會幕拆卸</p>
+    <p class="msg" style="margin:2px 0 6px;font-size:13px">民數記 4 ・ 利未人的搬家任務</p>
     <p class="verse"><b>民數記 1:51</b> 帳幕將往前行的時候,利未人要拆卸;將支搭的時候,利未人要豎起。</p>
-    <p class="msg" style="margin:6px 0 2px">先選年齡檔 —— 擔子數不一樣,難度就不一樣</p>
+    <div class="mascots" aria-hidden="true">
+      <i style="background:radial-gradient(circle at 35% 30%,#2f6fb5,#1d4676)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#7b4397,#4e2760)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#b83227,#7a1f18)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#c9a227,#8a6d13)"></i>
+      <i style="background:radial-gradient(circle at 35% 30%,#8d6e42,#5d4527)"></i>
+    </div>
+    <p class="msg" style="margin:2px 0 6px">橛子們等著歸隊。選一群開始:</p>
     <div class="ages" id="ages"></div>
-    <p class="msg" style="font-size:12px">選好之後,可以在關卡地圖按「← 換年齡檔」再改。</p>
+    <p class="msg" style="font-size:12px;margin-top:8px">選好之後,可以在關卡地圖按「← 換年齡檔」再改。</p>
   </section>
 
   <!-- ── 關卡地圖 ── -->
-  <section id="mapScreen" hidden>
+  <section id="mapScreen" class="card" hidden>
     <p class="msg" id="mapHead" style="margin:2px 0 0;font-size:20px;font-weight:800;color:var(--ink)"></p>
     <p class="msg" id="mapSub" style="margin:2px 0 6px"></p>
     <div class="map" id="map"></div>
@@ -153,10 +195,8 @@
     <div class="legend" id="legend" style="margin-top:6px"></div>
   </section>
 
-  <p class="msg" style="font-size:12px">
-    <a href="https://hfpc-play-stats.summer09201017.workers.dev/stats" target="_blank" rel="noopener noreferrer"
-       style="color:inherit;text-decoration:underline">📊 使用統計(同工用)</a>
-  </p>
+  <!-- 📊 使用統計連結只放 6 個大廳入口(使用者拍板 2026-07-26);遊戲頁尾不放 -->
+
 </div>
 
 <dialog id="dlg"><div id="dlgBody"></div>
@@ -168,8 +208,9 @@
 <script type="module">
 import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor } from './levels.js';
 import { indexLevel, initState, isExposed, exposedScrews, removeScrew, isWon, isStuck,
-         cloneState, stateKey, BIN_SIZE } from './rules.js';
+         cloneState, stateKey, BIN_SIZE, pointInPoly as isInPoly } from './rules.js';
 import { speak, stopSpeak, voiceOn, setVoiceOn, verseLine } from './tts.js';
+import { sfx, startBgm, setTrack, setMuted, isMuted } from './audio.js';
 
 // 有關卡排不下版面時,寧可讓老師當場看到紅字,也不要無聲少一關
 if (LAYOUT_ERRORS.length) document.body.insertAdjacentHTML('afterbegin',
@@ -206,12 +247,13 @@ const unlocked = (i) => allUnlocked || i === 0 || cleared.has(LEVELS[i].id) ||
 function drawAges() {
   $('ages').innerHTML = Object.values(AGE).map((a) => `
     <button class="age${a.id === ageId ? ' on' : ''}" data-age="${a.id}">
-      <b>${a.emoji} ${a.label}</b><small>${a.sub}</small>
+      <b>${a.emoji} ${a.short}</b><small>${a.sub}</small>
     </button>`).join('');
   $('ages').querySelectorAll('[data-age]').forEach((b) => {
     b.onclick = () => {
       ageId = b.dataset.age;
       try { localStorage.setItem(AGE_PREF_KEY, ageId); } catch { /* noop */ }
+      sfx.tap(); startBgm();   // 第一次點擊=瀏覽器允許出聲的時機,BGM 從這裡開始
       drawAges(); showMap();
     };
   });
@@ -265,6 +307,7 @@ function showMap() {
 function load(i, fresh = true) {
   if (fresh) attempt = { hints: 0, retries: 0 };
   li = i; level = LEVELS[i]; idx = indexLevel(level);
+  setTrack(level.id);   // ★ 每一關不同曲(BGM 百曲庫:同一關永遠同一首)
   state = initState(level, binsFor(level, ageId));
   hintId = null; fallingId = null;
   $('ageScreen').hidden = true; $('mapScreen').hidden = true; $('gameScreen').hidden = false;
@@ -302,8 +345,17 @@ const MAT = {
   bluecloth: 'linear-gradient(160deg,#2f6fb5,#1b4272)',
 };
 
+// v2「中央堆疊」:每片板就是一個不規則多邊形(levels.js 的 PILES,gen-pile.mjs 量測過),
+// 皮(.skin)用 clip-path 剪出**同一份**多邊形——畫出來的形狀=遮擋判定的形狀,零落差。
+function polyClip(b) {
+  const { x, y, w, h } = b.bbox;
+  return 'polygon(' + b.poly.map(([px, py]) =>
+    `${(((px - x) / w) * 100).toFixed(1)}% ${(((py - y) / h) * 100).toFixed(1)}%`).join(',') + ')';
+}
+
 function draw() {
   const st = $('stage'); st.innerHTML = '';
+  const alive = [...level.boards].filter((b) => state.boards.has(b.id));
   for (const b of [...level.boards].sort((x, y) => x.layer - y.layer)) {
     const el = document.createElement('div');
     const off = !state.boards.has(b.id);
@@ -313,10 +365,14 @@ function draw() {
     // ★ 每次 tap 都整個重畫,所以「剛拆完的那片」要先畫在原位、下一幀才加 .gone,
     //   transition 才會真的跑。直接生成就帶 .gone = 沒有狀態變化 = 瞬間消失(改前就是這樣)。
     el.className = 'board' + (off && !justFell ? ' gone settled' : '') + (!off && left === 1 ? ' loose' : '');
-    el.style.cssText += `left:${b.x}%;top:${b.y}%;width:${b.w}%;height:${b.h}%;
-      background:${MAT[b.mat] || MAT.wood};z-index:${10 + b.layer}`;
-    el.innerHTML = (b.shape && b.shape !== 'plate' ? `<i class="shape ${b.shape}"></i>` : '') +
-      `<span class="tag">${b.label}</span>`;
+    el.style.cssText += `left:${b.bbox.x}%;top:${b.bbox.y}%;width:${b.bbox.w}%;height:${b.bbox.h}%;
+      border:0;background:none;z-index:${10 + b.layer};
+      filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))`;
+    // 標籤放在板的重心;被更上層的板蓋住時先不顯示(拆掉上面它就浮出來=名字也跟著「出土」)
+    const buried = alive.some((o) => o.layer > b.layer && isInPoly(b.anchor[0], b.anchor[1], o.poly));
+    const tx = ((b.anchor[0] - b.bbox.x) / b.bbox.w) * 100, ty = ((b.anchor[1] - b.bbox.y) / b.bbox.h) * 100;
+    el.innerHTML = `<i class="skin" style="background:${MAT[b.mat] || MAT.wood};clip-path:${polyClip(b)}"></i>` +
+      (buried ? '' : `<span class="tag" style="position:absolute;left:${tx.toFixed(0)}%;top:${ty.toFixed(0)}%;transform:translate(-50%,-50%)">${b.label}</span>`);
     st.appendChild(el);
     if (justFell) requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('gone')));
   }
@@ -351,11 +407,16 @@ function drawBins() {
 }
 
 function tap(id, open) {
-  if (!open) { say('這根還被上面的東西壓著——先把壓在上面的拆掉。', 'bad'); return; }
+  if (!open) { sfx.locked(); say('這根還被上面的東西壓著——先把壓在上面的拆掉。', 'bad'); return; }
   hintId = null;
+  const before = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);   // 音效用:扛走=總數變少
   const r = removeScrew(idx, state, id);
   fallingId = r.boardCleared || null;   // 這一拔讓哪片板子掉了 → 給掉落動畫用
   if (!r.ok) { draw(); return lose('擔子都塞滿了不同顏色,再也放不下——這就是「按名指定」的意思(民 4:32)。'); }
+  const after = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);
+  if (after < before) sfx.carry();      // 滿三根同色,利未人扛走了
+  else sfx.pull();
+  if (r.boardCleared) sfx.fall();
   draw();
   fallingId = null;   // 動畫已排程,清掉免得下次重畫又演一次
   if (isWon(state)) return win();
@@ -364,6 +425,7 @@ function tap(id, open) {
 }
 
 function win() {
+  sfx.win();
   cleared.add(level.id);
   // ★ 星星(照 tsum 七款在地圖上顯示):不用提示、不重來 = ★★★,每用一次扣一顆,最少 1 顆。
   //   只往上記錄,重玩拿到更多顆才覆蓋(tsum 的「重玩拿星星」)。
@@ -385,7 +447,7 @@ function win() {
   }
 }
 
-function lose(why) { ping(`${SITE}-stuck`); say(why + ' 按「↻ 重來這關」再試一次。', 'bad'); }
+function lose(why) { sfx.stuck(); ping(`${SITE}-stuck`); say(why + ' 按「↻ 重來這關」再試一次。', 'bad'); }
 
 // 提示:用同一份規則搜一次,找出「拆了還有救」的那一根
 function hint() {
@@ -415,6 +477,7 @@ function hint() {
 
 function show(html) { $('dlgBody').innerHTML = html; $('dlg').showModal(); }
 function paintVoiceBtn() { const b = $('voice'); const on = voiceOn(); b.textContent = on ? '🔊' : '🔇'; b.classList.toggle('on', on); }
+function paintBgmBtn() { const b = $('bgm'); const on = !isMuted(); b.textContent = on ? '🎵' : '🚫'; b.classList.toggle('on', on); }
 
 $('dlgOk').onclick = () => $('dlg').close();
 $('retry').onclick = () => { attempt.retries++; load(li, false); };   // 重來要付星星的代價
@@ -425,6 +488,7 @@ $('cont').onclick = () => load(furthest());
 $('next').onclick = () => load(Math.min(LEVELS.length - 1, li + 1));
 $('readVerse').onclick = () => speak(verseLine(level.ref, level.verse));
 $('voice').onclick = () => { setVoiceOn(!voiceOn()); paintVoiceBtn(); };
+$('bgm').onclick = () => { setMuted(!isMuted()); paintBgmBtn(); };
 $('unlock').onclick = () => { allUnlocked = !allUnlocked; save(); drawMap(); say2(allUnlocked ? '已全部解鎖(老師模式)。' : '回到照順序解鎖。'); };
 $('reset').onclick = () => { cleared.clear(); stars = {}; allUnlocked = false; save(); drawMap(); say2('進度與星星都清掉了,從第一站重新開始。'); };
 $('back').onclick = () => { location.href = 'https://hfpc-bible-games.summer09201017.workers.dev/'; };
@@ -454,6 +518,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 
 paintVoiceBtn();
+paintBgmBtn();
 showAges();  // ★ 照 tsum 七款:進站第一眼=年齡檔選單(教室裡換一個孩子就換一檔),選完進地圖
 </script>
 </body>

@@ -19,17 +19,33 @@ export function initState(level, bins) {
   };
 }
 
+/**
+ * 點是否在多邊形內(ray casting;poly = [[x,y],…] 依序繞一圈,%-座標)。
+ * ★ 2026-07-26 改版:板件從矩形換成「不規則形狀 + 全部疊在中間」(使用者點名),
+ *   遮擋判定也要照真形狀——不是只有外觀剪個樣子。規則只有這一份,solver 與遊戲同吃。
+ */
+export function pointInPoly(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 /** 建索引:給 solver 與遊戲共用,避免每次都線性搜尋 */
 export function indexLevel(level) {
   const board = new Map(level.boards.map((b) => [b.id, b]));
   const screw = new Map(level.screws.map((s) => [s.id, s]));
-  // 每根螺絲「可能被誰壓住」= 層數更高、且矩形蓋住這個點的板子
+  // 每根螺絲「可能被誰壓住」= 層數更高、且**真形狀**蓋住這個點的板子
+  // (舊版是矩形;板子帶 poly 就用多邊形,沒有 poly 的舊資料退回矩形判定)
+  const hit = (b, x, y) => (b.poly ? pointInPoly(x, y, b.poly)
+    : x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
   const covers = new Map();
   for (const s of level.screws) {
     const own = board.get(s.board);
     const list = level.boards.filter(
-      (b) => b.id !== s.board && b.layer > own.layer &&
-        s.x >= b.x && s.x <= b.x + b.w && s.y >= b.y && s.y <= b.y + b.h
+      (b) => b.id !== s.board && b.layer > own.layer && hit(b, s.x, s.y)
     ).map((b) => b.id);
     covers.set(s.id, list);
   }

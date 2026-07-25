@@ -1,7 +1,8 @@
-// v6(2026-07-25 美術那輪):各材料不同顏色/形狀 + 剩最後一根橛子時板子搖搖欲墜
+// v7(2026-07-26):音效+BGM 曲庫(audio.js,新檔!)+ 可愛風選單/地圖 + 不規則板形
+// v6:各材料不同顏色/形狀 + 剩最後一根橛子時板子搖搖欲墜
 // v5:新增 layout.js(幾何算式),index.html/levels.js 都改過
-const CACHE_NAME = 'tabernacle-screw-v6';
-const STATIC_ASSETS = ['./', './index.html', './levels.js', './layout.js', './rules.js', './tts.js', './manifest.json', './tts/manifest.json'];
+const CACHE_NAME = 'tabernacle-screw-v7';
+const STATIC_ASSETS = ['./', './index.html', './levels.js', './layout.js', './rules.js', './tts.js', './audio.js', './manifest.json', './tts/manifest.json'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

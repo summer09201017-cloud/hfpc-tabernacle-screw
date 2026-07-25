@@ -13,7 +13,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'dist');
 
 // 白名單:出貨要的東西(tts/ 是預烤 mp3;scripts/、.git、node_modules 一律不上線)
-const SHIP = ['index.html', 'levels.js', 'layout.js', 'rules.js', 'tts.js', 'sw.js',
+// ⚠ 新增出貨檔一定要記得加進來(audio.js 就是 0726 新加的)——漏了線上會 404、遊戲載不起來
+const SHIP = ['index.html', 'levels.js', 'layout.js', 'rules.js', 'tts.js', 'audio.js', 'sw.js',
               'manifest.json', 'icon.svg', 'tts'];
 
 rmSync(out, { recursive: true, force: true });
