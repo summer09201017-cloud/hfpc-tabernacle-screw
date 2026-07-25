@@ -1,0 +1,17 @@
+{
+  "name": "hfpc-tabernacle-screw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "會幕拆卸 —— 聖經版螺絲解謎(民數記 4)",
+  "scripts": {
+    "check": "node scripts/solver.mjs",
+    "check:path": "node scripts/solver.mjs --path",
+    "serve": "npx --yes http-server -p 8099 -s",
+    "test:browser": "node scripts/browser-test.mjs",
+    "test": "node scripts/solver.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
+  }
+}

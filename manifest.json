@@ -1,0 +1,14 @@
+{
+  "name": "會幕拆卸 · 利未人要拆卸",
+  "short_name": "會幕拆卸",
+  "description": "照民數記 4 章的次序拆卸會幕,把橛子按名分進三族的擔子。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#241c14",
+  "theme_color": "#2b2118",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
