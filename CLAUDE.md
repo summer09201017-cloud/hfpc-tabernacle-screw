@@ -8,7 +8,7 @@
 - 6 關,全部經 solver 判定**保證可解**(三個年齡檔各驗)、瀏覽器實測真的點得完。
 - **已上架**:GitHub `summer09201017-cloud/hfpc-tabernacle-screw` ·
   CF **Pages** `hfpc-tabernacle-screw.pages.dev` · 已進大廳 data.js 卡片 · sites.json 已登記 ·
-  worker NAMES 已加。⚠ 文案與神學語氣**尚未經牧者過審**(大廳卡片註解已標)。
+  worker NAMES 已加。**✅ 2026-07-26 牧者過審文案與神學語氣,大廳卡片已點亮**,可以推給老師上課用。
 - 部署一律 `node scripts/build-dist.mjs` 再 `wrangler pages deploy dist`(白名單制)。
   ★ 不要 deploy 專案根目錄:那會把 `scripts/` 一起送上 CDN;
   **Pages 不吃 `.assetsignore`**(那是 Workers assets 的功能)。
