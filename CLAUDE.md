@@ -3,11 +3,19 @@
 聖經版「螺絲解謎」:照民數記 4 章的次序把會幕一層層拆下來,橛子按名分進三族的擔子。
 零相依、零美術檔、可離線(PWA)、DOM/CSS 渲染,不用 Canvas 也不用物理引擎。
 
-## 現況(2026-07-25 建立)
+## 現況(2026-07-25 建立;同日晚加難度+美術)
 
-- 6 關,全部經 solver 判定**保證可解**、瀏覽器實測**真的點得完**。
-- **尚未上架**:沒有 GitHub 遠端、沒有部署、沒有進大廳 data.js、沒有登記進 sites.json。
-  上架要使用者逐字點名(照 /new-* 一條龍慣例)。
+- 6 關,全部經 solver 判定**保證可解**(三個年齡檔各驗)、瀏覽器實測真的點得完。
+- **已上架**:GitHub `summer09201017-cloud/hfpc-tabernacle-screw` ·
+  CF **Pages** `hfpc-tabernacle-screw.pages.dev` · 已進大廳 data.js 卡片 · sites.json 已登記 ·
+  worker NAMES 已加。⚠ 文案與神學語氣**尚未經牧者過審**(大廳卡片註解已標)。
+- 部署一律 `node scripts/build-dist.mjs` 再 `wrangler pages deploy dist`(白名單制)。
+  ★ 不要 deploy 專案根目錄:那會把 `scripts/` 一起送上 CDN;
+  **Pages 不吃 `.assetsignore`**(那是 Workers assets 的功能)。
+- 難度:幾何改由 `layout.js` 依「疊柱規格」算出來(手擺座標擺不出真遮擋 → 第一版會想 bot 全關 0% 卡死)。
+  現況青少年檔會想 bot 卡死:站1 教學 0% · 站2 23% · 站3 20% · 站4 19% · 站5 26% · 站6 31%。
+  ⚠ 改 `columns` / `bins` 就是改難度,改完必跑 `npm run check`(難度出帶會 exit 1)。
+  要重新挑分法用 `npm run tune`(窮舉分法 × 擔子數,並硬篩可解性、a11y 間距、神學次序)。
 
 ## 玩法規則(只有一份:`rules.js`)
 
