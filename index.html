@@ -42,6 +42,19 @@
   .board.gone{opacity:0;transform:translateY(170%) rotate(11deg);pointer-events:none}
   /* 已經掉完的(重畫時)不要再演一次,直接就位 */
   .board.gone.settled{transition:none}
+  /* ★ 只剩最後一根橛子 → 搖搖欲墜(使用者點名):讓孩子看得出「再拆一根它就掉了」。
+     transform-origin 放底部,晃起來像被一根釘子吊著;reduced-motion 會關掉。 */
+  @keyframes wobbleLoose{0%,100%{transform:rotate(-.9deg)}50%{transform:rotate(.9deg)}}
+  .board.loose{animation:wobbleLoose .85s ease-in-out infinite;transform-origin:50% 100%}
+  /* 形狀提示:板件在畫面上是同尺寸矩形(遮擋深度與螺絲間距靠這個保證),
+     所以「各材料不同形狀」用內襯畫出來——柱子細長、座矮胖、閂橫長、繩子細帶。
+     只動內襯不動矩形,才不會破壞已經量測過的難度與 a11y 間距。 */
+  .board .shape{position:absolute;background:rgba(0,0,0,.2);border-radius:8px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16);pointer-events:none}
+  .board .shape.pillar{left:33%;right:33%;top:4%;bottom:4%}
+  .board .shape.base{left:6%;right:6%;bottom:6%;height:34%}
+  .board .shape.bar{left:4%;right:4%;top:39%;height:22%}
+  .board .shape.rope{left:4%;right:4%;top:44%;height:12%;border-radius:99px}
   /* 44px:孩子用平板點得到的最小尺寸(a11y 觸控目標鐵則) */
   .screw{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
     border:2px solid rgba(0,0,0,.5);cursor:pointer;padding:0;
@@ -87,7 +100,7 @@
   dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;
     max-width:420px;padding:20px;line-height:1.8}
   dialog::backdrop{background:rgba(0,0,0,.6)}
-  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
 </style>
 </head>
 <body>
@@ -267,18 +280,43 @@ function load(i, fresh = true) {
 
 function say(t, cls) { const m = $('msg'); m.textContent = t; m.className = 'msg ' + (cls || ''); }
 
+// 材料即經文:每片板照它在聖經裡的材質上色(零美術檔,純 CSS 漸層)。
+// 出 26:1/26:31 幔子=藍紫朱紅+撚的細麻 · 26:7 山羊毛 · 26:14 染紅公羊皮/海狗皮 ·
+// 26:19 銀座 · 26:29 板與閂包金 · 27:9-11 院子細麻帷子與銅座 · 民 4:6 純藍色的毯子。
+const MAT = {
+  linen:  'linear-gradient(160deg,#e6dcc2,#c6b998)',
+  veil:   'linear-gradient(180deg,transparent 0 16%,rgba(47,111,181,.55) 16% 24%,transparent 24% 42%,' +
+          'rgba(123,67,151,.55) 42% 50%,transparent 50% 68%,rgba(184,50,39,.55) 68% 76%,transparent 76%),' +
+          'linear-gradient(160deg,#e6dcc2,#c6b998)',
+  goat:   'repeating-linear-gradient(104deg,#6d5d47 0 6px,#5a4c3a 6px 12px)',
+  ram:    'linear-gradient(160deg,#8e3b2b,#5c2317)',
+  seal:   'radial-gradient(circle at 26% 22%,rgba(0,0,0,.28) 5px,transparent 6px),' +
+          'radial-gradient(circle at 68% 62%,rgba(0,0,0,.24) 6px,transparent 7px),' +
+          'linear-gradient(160deg,#7c7666,#524d40)',
+  wood:   'repeating-linear-gradient(92deg,#6f5636 0 9px,#634c2f 9px 18px)',
+  gilt:   'linear-gradient(160deg,#b98f34,#7d5f1c)',   // 皂莢木包金:比純金器具略沉
+  gold:   'linear-gradient(160deg,#e3c55e,#a4801d)',
+  silver: 'linear-gradient(160deg,#d7dce4,#949dab)',
+  bronze: 'linear-gradient(160deg,#b0733a,#75461d)',
+  rope:   'repeating-linear-gradient(46deg,#b1935e 0 5px,#9a814e 5px 10px)',
+  bluecloth: 'linear-gradient(160deg,#2f6fb5,#1b4272)',
+};
+
 function draw() {
   const st = $('stage'); st.innerHTML = '';
   for (const b of [...level.boards].sort((x, y) => x.layer - y.layer)) {
     const el = document.createElement('div');
     const off = !state.boards.has(b.id);
     const justFell = b.id === fallingId;
+    // 只剩最後一根橛子 → 搖搖欲墜(使用者點名)
+    const left = idx.onBoard.get(b.id).filter((id) => state.screws.has(id)).length;
     // ★ 每次 tap 都整個重畫,所以「剛拆完的那片」要先畫在原位、下一幀才加 .gone,
     //   transition 才會真的跑。直接生成就帶 .gone = 沒有狀態變化 = 瞬間消失(改前就是這樣)。
-    el.className = 'board' + (off && !justFell ? ' gone settled' : '');
+    el.className = 'board' + (off && !justFell ? ' gone settled' : '') + (!off && left === 1 ? ' loose' : '');
     el.style.cssText += `left:${b.x}%;top:${b.y}%;width:${b.w}%;height:${b.h}%;
-      background:linear-gradient(160deg,#6f5636,#4a3722);z-index:${10 + b.layer}`;
-    el.innerHTML = `<span class="tag">${b.label}</span>`;
+      background:${MAT[b.mat] || MAT.wood};z-index:${10 + b.layer}`;
+    el.innerHTML = (b.shape && b.shape !== 'plate' ? `<i class="shape ${b.shape}"></i>` : '') +
+      `<span class="tag">${b.label}</span>`;
     st.appendChild(el);
     if (justFell) requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('gone')));
   }
