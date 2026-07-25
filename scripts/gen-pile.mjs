@@ -21,7 +21,9 @@ const ONLY = argOf('level', null);
 const TRIES = +argOf('tries', 30000);
 const DRY = args.includes('--dry');
 
-const BAND = { teen: { min: 0.12, max: 0.40, randMin: 0.25 }, kids: { max: 0.25 }, kinder: { max: 0.10 } };
+// ★ 0726 使用者玩過第一版堆疊後說「還要再加難度」→ 目標帶整段上移:
+//   青少年 12~40% → 30~55%(想一下也常失手);兒童放寬到 ≤30%(可以偶爾卡);幼幼仍幾乎不卡
+const BAND = { teen: { min: 0.30, max: 0.55, randMin: 0.5 }, kids: { max: 0.30 }, kinder: { max: 0.10 } };
 
 // 種子隨機:每個 try 一顆種子 → 搜出來的佈局完全可重現
 const lcg = (seed) => () => ((seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff);
@@ -131,11 +133,13 @@ function search(raw) {
     if (!lv) { why.layout++; continue; }
     if (tightestSpacing(lv).spacing < L.MIN_SPACING) { why.spacing++; continue; }
 
+    // 關卡可帶自己的下限(raw.teenMin):第五站全是細長件,幾何上埋不到 30%,退而求其次
+    const tMin = raw.teenMin ?? BAND.teen.min;
     const mrnd = lcg(20260726);                        // 量測用固定種子=迴歸基準
     const teen = bots(lv, binsFor(lv, 'teen'), 140, mrnd);
-    if (!raw.teaching && (teen.G < BAND.teen.min - 0.03 || teen.G > BAND.teen.max + 0.03)) { why.band++; continue; } // 粗篩
+    if (!raw.teaching && (teen.G < tMin - 0.03 || teen.G > BAND.teen.max + 0.03)) { why.band++; continue; } // 粗篩
     const teenF = raw.teaching ? teen : bots(lv, binsFor(lv, 'teen'), 500, lcg(20260726));
-    if (!raw.teaching && (teenF.G < BAND.teen.min || teenF.G > BAND.teen.max || teenF.R < BAND.teen.randMin)) { why.band++; continue; }
+    if (!raw.teaching && (teenF.G < tMin || teenF.G > BAND.teen.max || teenF.R < BAND.teen.randMin)) { why.band++; continue; }
     const kids = bots(lv, binsFor(lv, 'kids'), 400, lcg(1));
     const kinder = bots(lv, binsFor(lv, 'kinder'), 400, lcg(2));
     if (!raw.teaching && (kids.G > BAND.kids.max || kinder.G > BAND.kinder.max)) { why.ageBand++; continue; }

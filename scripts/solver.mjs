@@ -128,20 +128,22 @@ function difficulty(level, bins, runs = 400) {
 //     青少年:會想 12~40% 卡死(想一下也可能失手)、而且躺平要 ≥25%(不動腦要有代價)
 //     兒童:會想 ≤25%(多一個擔子好轉身)   幼稚園:會想 ≤10%(幾乎不該卡)
 //   教學關(level.teaching)例外:它的任務是教規則,0% 卡死是對的。
+// 0726 使用者玩過堆疊第一版後點名「還要再加難度」→ 帶整段上移(gen-pile.mjs 同步)
 const BAND = {
-  teen:   { max: 0.40, min: 0.12, randMin: 0.25, why: '青少年' },
-  kids:   { max: 0.25, min: 0,    randMin: 0,    why: '兒童' },
-  kinder: { max: 0.10, min: 0,    randMin: 0,    why: '幼稚園' },
+  teen:   { max: 0.55, min: 0.30, randMin: 0.5, why: '青少年' },
+  kids:   { max: 0.30, min: 0,    randMin: 0,   why: '兒童' },
+  kinder: { max: 0.10, min: 0,    randMin: 0,   why: '幼稚園' },
 };
-function difficultyVerdict(ageId, { random, greedy }, teaching) {
+function difficultyVerdict(ageId, { random, greedy }, teaching, teenMin) {
   const R = (random * 100).toFixed(0) + '%', G = (greedy * 100).toFixed(0) + '%';
   const line = `躺平 bot 卡死 ${R} / 會想 bot 卡死 ${G}`;
   const b = BAND[ageId] || BAND.kids;
+  const min = ageId === 'teen' && teenMin != null ? teenMin : b.min;   // 關卡可帶自己的下限(第五站全細長件)
   if (teaching) return { ok: true, line: `⚪ ${line} —— 教學關(專心教規則,不該卡死)` };
   if (greedy > b.max)
     return { ok: false, line: `🔴 ${line} —— ${b.why}檔會想也常卡(上限 ${b.max * 100}%),加一個擔子或改 columns` };
-  if (greedy < b.min)
-    return { ok: false, line: `🟠 ${line} —— ${b.why}檔太簡單(想一下必勝,下限 ${b.min * 100}%),減一個擔子或把柱疊深` };
+  if (greedy < min)
+    return { ok: false, line: `🟠 ${line} —— ${b.why}檔太簡單(想一下必勝,下限 ${min * 100}%),減一個擔子或把柱疊深` };
   if (random < b.randMin)
     return { ok: false, line: `🟠 ${line} —— 連亂拆都很少卡(躺平應 ≥${b.randMin * 100}%),這關沒在考驗次序` };
   return { ok: true, line: `🟢 ${line} —— 落在${b.why}檔目標帶` };
@@ -170,7 +172,7 @@ for (const level of levels) {
     if (path) {
       console.log(`   🟢 ${tag} 保證可解(${path.length} 步 / 搜 ${nodes.toLocaleString()} 狀態)`);
       if (WANT_PATH) console.log(`      順序:${path.join(' → ')}`);
-      const v = difficultyVerdict(age.id, difficulty(level, bins), level.teaching);
+      const v = difficultyVerdict(age.id, difficulty(level, bins), level.teaching, level.teenMin);
       console.log(`      難度:${v.line}`);
       if (!v.ok) bad++;                      // ★ 難度出帶也算出廠不合格(不只是印個字)
     } else if (budgetHit) {
