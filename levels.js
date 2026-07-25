@@ -70,10 +70,11 @@ const RAW = [
     // 教學關:只有兩種顏色(=永遠有空擔子),故意不會卡死,專心教「上面壓著就拔不動」。
     // 一柱三層,由上而下就是院子的拆法:帷子 → 柱子 → 帶卯的座。
     columns: [['a', 'b', 'c']],
+    // mat/shape = 外觀(材料即經文,見 index.html 的 MAT):院子=細麻帷子、銅座(出 27:9-11)
     boards: [
-      { id: 'a', label: '帷子' },
-      { id: 'b', label: '柱子' },
-      { id: 'c', label: '帶卯的座' },
+      { id: 'a', label: '帷子', mat: 'linen', shape: 'plate' },
+      { id: 'b', label: '柱子', mat: 'wood', shape: 'pillar' },
+      { id: 'c', label: '帶卯的座', mat: 'bronze', shape: 'base' },
     ],
     screws: [
       { id: 's1', board: 'a', color: 'blue' },
@@ -95,10 +96,10 @@ const RAW = [
     // 海狗皮是最外層的頂蓋(出 26:14),壓著會幕的蓋。
     columns: [['a', 'd'], ['b', 'c']],
     boards: [
-      { id: 'a', label: '門簾' },
-      { id: 'b', label: '海狗皮' },
-      { id: 'c', label: '會幕的蓋' },
-      { id: 'd', label: '幔子' },
+      { id: 'a', label: '門簾', mat: 'veil', shape: 'plate' },        // 出 26:36 藍紫朱紅+細麻
+      { id: 'b', label: '海狗皮', mat: 'seal', shape: 'plate' },      // 出 26:14 海狗皮頂蓋
+      { id: 'c', label: '會幕的蓋', mat: 'ram', shape: 'plate' },     // 出 26:14 染紅的公羊皮
+      { id: 'd', label: '幔子', mat: 'veil', shape: 'plate' },
     ],
     screws: [
       { id: 's1', board: 'a', color: 'blue' },
@@ -123,11 +124,11 @@ const RAW = [
     // 第二柱是最裡面兩層:繡花幔子壓著帳幕的板。量到 青少年 18% / 躺平 78%。
     columns: [['a', 'b', 'c'], ['d', 'e']],
     boards: [
-      { id: 'a', label: '海狗皮' },
-      { id: 'b', label: '公羊皮' },
-      { id: 'c', label: '山羊毛幔子' },
-      { id: 'd', label: '繡花幔子' },
-      { id: 'e', label: '帳幕的板' },
+      { id: 'a', label: '海狗皮', mat: 'seal', shape: 'plate' },        // 出 26:14
+      { id: 'b', label: '公羊皮', mat: 'ram', shape: 'plate' },         // 出 26:14 染紅的公羊皮
+      { id: 'c', label: '山羊毛幔子', mat: 'goat', shape: 'plate' },    // 出 26:7 山羊毛幔子
+      { id: 'd', label: '繡花幔子', mat: 'veil', shape: 'plate' },      // 出 26:1 藍紫朱紅+細麻
+      { id: 'e', label: '帳幕的板', mat: 'gilt', shape: 'plate' },      // 出 26:29 板用金子包裹
     ],
     screws: [
       { id: 's1', board: 'a', color: 'wood' },
@@ -156,12 +157,12 @@ const RAW = [
     // 三種關係都對得上經文,量到 青少年 20% / 躺平 79%。
     columns: [['a', 'c'], ['b', 'e'], ['d', 'f']],
     boards: [
-      { id: 'a', label: '金閂' },
-      { id: 'b', label: '板(北)' },
-      { id: 'c', label: '板(中)' },
-      { id: 'd', label: '板(南)' },
-      { id: 'e', label: '下閂' },
-      { id: 'f', label: '帶卯的座' },
+      { id: 'a', label: '金閂', mat: 'gold', shape: 'bar' },            // 出 26:29 閂也用金子包裹
+      { id: 'b', label: '板(北)', mat: 'gilt', shape: 'plate' },        // 出 26:29 板用金子包裹
+      { id: 'c', label: '板(中)', mat: 'gilt', shape: 'plate' },
+      { id: 'd', label: '板(南)', mat: 'gilt', shape: 'plate' },
+      { id: 'e', label: '下閂', mat: 'gold', shape: 'bar' },
+      { id: 'f', label: '帶卯的座', mat: 'silver', shape: 'base' },     // 出 26:19 帶卯的銀座
     ],
     screws: [
       { id: 's1', board: 'a', color: 'gold' },
@@ -191,14 +192,15 @@ const RAW = [
     // 繩子先解(壓著柱一),每根柱子卸下後才露出它底下的橛子或帶卯的座(民 4:32 的清單次序)。
     // 四柱並排=四個獨立的小決定同時擺在眼前,量到 青少年 26% / 躺平 96%。
     columns: [['a', 'b'], ['c'], ['d', 'g'], ['e', 'f']],
+    // 這一關是**院子**(民 4:32),所以座是**銅**座(出 27:10),不是帳幕的銀座——差別本身就是教材
     boards: [
-      { id: 'a', label: '繩子' },
-      { id: 'b', label: '柱(一)' },
-      { id: 'c', label: '柱(二)' },
-      { id: 'd', label: '柱(三)' },
-      { id: 'e', label: '柱(四)' },
-      { id: 'f', label: '橛子排' },
-      { id: 'g', label: '帶卯的座' },
+      { id: 'a', label: '繩子', mat: 'rope', shape: 'rope' },
+      { id: 'b', label: '柱(一)', mat: 'wood', shape: 'pillar' },
+      { id: 'c', label: '柱(二)', mat: 'wood', shape: 'pillar' },
+      { id: 'd', label: '柱(三)', mat: 'wood', shape: 'pillar' },
+      { id: 'e', label: '柱(四)', mat: 'wood', shape: 'pillar' },
+      { id: 'f', label: '橛子排', mat: 'bronze', shape: 'bar' },        // 出 27:19 一切的橛子都要用銅做
+      { id: 'g', label: '帶卯的座', mat: 'bronze', shape: 'base' },     // 出 27:10 帶卯的銅座
     ],
     screws: [
       { id: 's1', board: 'a', color: 'blue' },
@@ -235,12 +237,12 @@ const RAW = [
     //   量到 青少年 26% / 躺平 92%,是全關最難的一站(終站該最難)。
     columns: [['a', 'f', 'e'], ['b', 'c', 'd']],
     boards: [
-      { id: 'a', label: '遮掩櫃的幔子' },
-      { id: 'b', label: '海狗皮' },
-      { id: 'c', label: '純藍色的毯子' },
-      { id: 'd', label: '杠(左)' },
-      { id: 'e', label: '杠(右)' },
-      { id: 'f', label: '法櫃' },
+      { id: 'a', label: '遮掩櫃的幔子', mat: 'veil', shape: 'plate' },   // 出 26:31 藍紫朱紅+細麻
+      { id: 'b', label: '海狗皮', mat: 'seal', shape: 'plate' },         // 民 4:6 用海狗皮蓋在上頭
+      { id: 'c', label: '純藍色的毯子', mat: 'bluecloth', shape: 'plate' }, // 民 4:6 再蒙上純藍色的毯子
+      { id: 'd', label: '杠(左)', mat: 'gold', shape: 'pillar' },        // 出 25:13 皂莢木包金的杠
+      { id: 'e', label: '杠(右)', mat: 'gold', shape: 'pillar' },
+      { id: 'f', label: '法櫃', mat: 'gold', shape: 'plate' },           // 聖物,最後才動(民 4:15)
     ],
     screws: [
       // 幔子三色線,照出 26:1「藍色、紫色、朱紅色」

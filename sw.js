@@ -1,5 +1,6 @@
-// v5(2026-07-25 加難度那輪):新增 layout.js(幾何算式),index.html/levels.js 都改過
-const CACHE_NAME = 'tabernacle-screw-v5';
+// v6(2026-07-25 美術那輪):各材料不同顏色/形狀 + 剩最後一根橛子時板子搖搖欲墜
+// v5:新增 layout.js(幾何算式),index.html/levels.js 都改過
+const CACHE_NAME = 'tabernacle-screw-v6';
 const STATIC_ASSETS = ['./', './index.html', './levels.js', './layout.js', './rules.js', './tts.js', './manifest.json', './tts/manifest.json'];
 
 self.addEventListener('install', (e) => {
