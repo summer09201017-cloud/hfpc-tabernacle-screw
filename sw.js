@@ -1,7 +1,7 @@
 // v8(2026-07-26):版面 v2 中央堆疊(多邊形遮擋)——levels/layout/rules/index 全改過
 // v7:音效+BGM 曲庫(audio.js,新檔!)+ 可愛風選單/地圖
 // v6:各材料不同顏色/形狀 + 剩最後一根橛子時板子搖搖欲墜
-const CACHE_NAME = 'tabernacle-screw-v10';
+const CACHE_NAME = 'tabernacle-screw-v11';
 const STATIC_ASSETS = ['./', './index.html', './levels.js', './layout.js', './rules.js', './tts.js', './audio.js', './manifest.json', './tts/manifest.json'];
 
 self.addEventListener('install', (e) => {

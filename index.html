@@ -120,6 +120,12 @@
   .age{flex:1;min-width:98px;background:var(--grass);border:2px solid var(--grass2);border-radius:16px;
     padding:12px 10px;cursor:pointer;color:#2e451c;font-family:inherit;min-height:76px;text-align:center;
     box-shadow:0 3px 0 rgba(70,100,40,.35);transition:transform .12s ease}
+  /* ★ 首頁滿版(使用者:選單太小、擠最上方):.wrap 本來就是 100dvh 直欄,
+     讓年齡畫面吃掉剩餘高度並垂直置中;按鈕加大到後排孩子也看得清。 */
+  #ageScreen{flex:1;display:flex;flex-direction:column;justify-content:center}
+  #ageScreen .age{min-height:128px;padding:18px 12px;border-radius:20px}
+  #ageScreen .age b{font-size:28px}
+  #ageScreen .age small{font-size:14px;margin-top:6px}
   .age:active{transform:translateY(2px);box-shadow:none}
   .age.on{background:#ffe9b0;border-color:var(--warn);color:#6b4a12;box-shadow:0 3px 0 rgba(160,110,30,.35)}
   .age b{display:block;font-size:19px}
@@ -146,8 +152,8 @@
 
   <!-- ── 年齡檔選單(第一眼看到的畫面;照 tsum 七款:先選檔位,再進地圖;可愛風照斑點羊)── -->
   <section id="ageScreen" class="card">
-    <p class="msg" style="margin:0;font-size:22px;font-weight:800;color:var(--ink)">⛺ 會幕拆卸</p>
-    <p class="msg" style="margin:2px 0 6px;font-size:13px">民數記 4 ・ 利未人的搬家任務</p>
+    <p class="msg" style="margin:0;font-size:32px;font-weight:800;color:var(--ink)">⛺ 會幕拆卸</p>
+    <p class="msg" style="margin:2px 0 6px;font-size:16px">民數記 4 ・ 利未人的搬家任務</p>
     <p class="verse"><b>民數記 1:51</b> 帳幕將往前行的時候,利未人要拆卸;將支搭的時候,利未人要豎起。</p>
     <div class="mascots" aria-hidden="true">
       <i style="background:radial-gradient(circle at 35% 30%,#2f6fb5,#1d4676)"></i>
