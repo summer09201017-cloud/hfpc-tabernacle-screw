@@ -11,9 +11,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { RAW, binsFor, AGE } from '../levels.js';
+import { RAW, binsFor, trayFor, AGE } from '../levels.js';
 import { makePoly, tightestSpacing, norm, L } from '../layout.js';
-import { indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey, pointInPoly } from '../rules.js';
+import { indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey, pointInPoly, canPlace } from '../rules.js';
 
 const args = process.argv.slice(2);
 const argOf = (k, d) => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : d; };
@@ -23,7 +23,9 @@ const DRY = args.includes('--dry');
 
 // ★ 0726 使用者玩過第一版堆疊後說「還要再加難度」→ 目標帶整段上移:
 //   青少年 12~40% → 30~55%(想一下也常失手);兒童放寬到 ≤30%(可以偶爾卡);幼幼仍幾乎不卡
-const BAND = { teen: { min: 0.30, max: 0.55, randMin: 0.5 }, kids: { max: 0.30 }, kinder: { max: 0.10 } };
+// ★ 0726 帶重校(拒絕制語意,與 solver.mjs 同步):bot 只挑「放得進」的之後躺平≈會想,
+//   randMin 0.5→0.25(舊值是「點錯即死」時代的殘留);會想 30~55% 續用=真卡死率。
+const BAND = { teen: { min: 0.30, max: 0.55, randMin: 0.25 }, kids: { max: 0.30 }, kinder: { max: 0.10 } };
 
 // 種子隨機:每個 try 一顆種子 → 搜出來的佈局完全可重現
 const lcg = (seed) => () => ((seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff) / 0x7fffffff);
@@ -96,7 +98,7 @@ function tryLayout(raw, rnd) {
 }
 
 // ── 可解性 + 兩隻 bot(與 solver.mjs 同一套規則,rules.js 只有一份)──
-function solvable(level, bins, budget = 400000) {
+function solvable(level, bins, tray, budget = 400000) {
   const idx = indexLevel(level); const seen = new Set(); let nn = 0;
   const dfs = (st) => {
     if (isWon(st)) return true;
@@ -108,13 +110,15 @@ function solvable(level, bins, budget = 400000) {
     }
     return false;
   };
-  return dfs(initState(level, bins));
+  return dfs(initState(level, bins, tray));
 }
-function bots(level, bins, runs, rnd) {
+function bots(level, bins, tray, runs, rnd) {
   const idx = indexLevel(level);
   const pick = (a) => a[Math.floor(rnd() * a.length) % a.length];
-  const play = (p) => { const st = initState(level, bins);
-    for (;;) { if (isWon(st)) return true; const ex = exposedScrews(idx, st);
+  // ★ 拒絕制語意(2026-07-26 帶重校,與 solver.mjs playout 同款):bot 只挑「放得進」的
+  const play = (p) => { const st = initState(level, bins, tray);
+    for (;;) { if (isWon(st)) return true;
+      const ex = exposedScrews(idx, st).filter((id) => canPlace(st, idx.screw.get(id).color));
       if (!ex.length) return false; if (!removeScrew(idx, st, p(ex, st)).ok) return false; } };
   let R = 0, G = 0;
   for (let i = 0; i < runs; i++) if (!play((ex) => pick(ex))) R++;
@@ -136,14 +140,20 @@ function search(raw) {
     // 關卡可帶自己的下限(raw.teenMin):第五站全是細長件,幾何上埋不到 30%,退而求其次
     const tMin = raw.teenMin ?? BAND.teen.min;
     const mrnd = lcg(20260726);                        // 量測用固定種子=迴歸基準
-    const teen = bots(lv, binsFor(lv, 'teen'), 140, mrnd);
+    const teen = bots(lv, binsFor(lv, 'teen'), trayFor('teen'), 140, mrnd);
     if (!raw.teaching && (teen.G < tMin - 0.03 || teen.G > BAND.teen.max + 0.03)) { why.band++; continue; } // 粗篩
-    const teenF = raw.teaching ? teen : bots(lv, binsFor(lv, 'teen'), 500, lcg(20260726));
+    const teenF = raw.teaching ? teen : bots(lv, binsFor(lv, 'teen'), trayFor('teen'), 500, lcg(20260726));
     if (!raw.teaching && (teenF.G < tMin || teenF.G > BAND.teen.max || teenF.R < BAND.teen.randMin)) { why.band++; continue; }
-    const kids = bots(lv, binsFor(lv, 'kids'), 400, lcg(1));
-    const kinder = bots(lv, binsFor(lv, 'kinder'), 400, lcg(2));
+    // ★ 防「騎帶邊」(0726 站六 31% 收檔、solver 換種子量 29% 翻紅):
+    //   用 solver.mjs 的同款亂數(⚠ 它是浮點乘法 LCG,跟本檔的 imul 版同種子不同序列!)
+    //   +同種子(20260725)+同局數(400)再量一次,兩把尺都落帶才准收檔。
+    const solverRnd = (seed) => () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    const teenS = raw.teaching ? teenF : bots(lv, binsFor(lv, 'teen'), trayFor('teen'), 400, solverRnd(20260725));
+    if (!raw.teaching && (teenS.G < tMin || teenS.G > BAND.teen.max || teenS.R < BAND.teen.randMin)) { why.band++; continue; }
+    const kids = bots(lv, binsFor(lv, 'kids'), trayFor('kids'), 400, lcg(1));
+    const kinder = bots(lv, binsFor(lv, 'kinder'), trayFor('kinder'), 400, lcg(2));
     if (!raw.teaching && (kids.G > BAND.kids.max || kinder.G > BAND.kinder.max)) { why.ageBand++; continue; }
-    if (!Object.values(AGE).every((a) => solvable(lv, binsFor(lv, a.id)))) { why.unsolvable++; continue; }
+    if (!Object.values(AGE).every((a) => solvable(lv, binsFor(lv, a.id), trayFor(a.id)))) { why.unsolvable++; continue; }
 
     return { lv, t, teen: teenF, kids, kinder };
   }
@@ -154,9 +164,14 @@ function search(raw) {
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const levelsPath = join(root, 'levels.js');
 let src = readFileSync(levelsPath, 'utf8');
+// ★ CRLF 雷(candy-forge 同款,0726 在 HFP 機真踩到):autocrlf 工作樹是 \r\n,
+//   下面的 PILES 正則寫死 ;\n// 會整段對不上 → 「✓ 已寫回」其實是 no-op 寫回原檔。
+//   讀進來先正規化成 \n,git autocrlf 會在 commit 時處理回去。
+src = src.replace(/\r\n/g, '\n');
 const m = src.match(/export const PILES = ([\s\S]*?);\n\/\/ ⟪PILES-END⟫/);
+if (!m) { console.error('🔴 levels.js 找不到 ⟪PILES⟫ 區段(或換行被動過)——拒絕無聲 no-op,先修檔再跑。'); process.exit(1); }
 let piles = {};
-try { piles = m && m[1].trim() !== 'null' ? JSON.parse(m[1]) : {}; } catch { piles = {}; }
+try { piles = m[1].trim() !== 'null' ? JSON.parse(m[1]) : {}; } catch { piles = {}; }
 
 console.log('會幕拆卸 · 堆疊佈局產生器 v2(中央堆疊+多邊形遮擋)\n');
 let bad = 0;

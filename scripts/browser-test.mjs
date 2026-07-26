@@ -18,20 +18,24 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 
-// ── ① 進站第一眼要看到關卡地圖與第一站 ──
-check(await page.locator('#mapScreen').isVisible(), '進站第一眼=關卡地圖(不是直接丟進關卡)');
+// ── ① 進站第一眼=年齡檔選單(照 tsum 七款;07-26 可愛風改版後的正確流程),選完才進地圖 ──
+check(await page.locator('#ageScreen').isVisible(), '進站第一眼=年齡檔選單');
 check(await page.locator('#gameScreen').isHidden(), '遊戲畫面預設收起');
+const ages = await page.locator('.age').count();
+check(ages === 3, `年齡三檔選單(實得 ${ages})`);
+await page.click('[data-age="kids"]');
+check(await page.locator('#mapScreen').isVisible(), '選完檔位進關卡地圖');
+// ★ 0727 回歸：#ageScreen 的 display:flex 曾蓋過 hidden → 年齡選單黏在每一關最上方
+check(await page.locator('#ageScreen').isHidden(), '進地圖後年齡選單真的收起（不會黏在最上面）');
 const nodes = await page.locator('#map .node').count();
 check(nodes === 6, `地圖列出 6 站(實得 ${nodes})`);
 check((await page.locator('#map .node').first().textContent()).includes('第一站'), '看得到第一站');
 check(await page.locator('#map .node').nth(1).evaluate((e) => e.classList.contains('locked')), '第二站一開始是鎖的');
 
-// ── ② 年齡三檔:選單在、切換會改擔子數、會記住 ──
-const ages = await page.locator('.age').count();
-check(ages === 3, `年齡三檔選單(實得 ${ages})`);
+// ── ② 年齡三檔:切換會改擔子數、會記住 ──
 const binsText = async () => (await page.locator('#map .node').first().textContent()).match(/擔子 (\d+)/)?.[1];
-await page.click('[data-age="teen"]'); const teenBins = await binsText();
-await page.click('[data-age="kinder"]'); const kinderBins = await binsText();
+await page.click('#toAges'); await page.click('[data-age="teen"]'); const teenBins = await binsText();
+await page.click('#toAges'); await page.click('[data-age="kinder"]'); const kinderBins = await binsText();
 check(+kinderBins > +teenBins, `幼稚園擔子(${kinderBins})比青少年(${teenBins})多 → 分齡真的有作用`);
 await page.reload({ waitUntil: 'networkidle' });
 check(await page.locator('[data-age="kinder"]').evaluate((e) => e.classList.contains('on')), '年齡選擇重整後記得(跨關偏好鍵)');
@@ -107,7 +111,7 @@ await page.evaluate(() => document.getElementById('dlg').close());
 await page.click('#toMap');
 const stars = await page.locator('#map .node.cleared').count();
 check(stars === 6, `地圖 6 站都標上通關(實得 ${stars})`);
-check((await page.locator('#map .node').nth(3).textContent()).includes('⭐'), '通關的站顯示 ⭐');
+check((await page.locator('#map .node').nth(3).textContent()).includes('★'), '通關的站顯示 ★(07-26 起=可重玩拿星的 ★★★)');
 
 // ── ⑥ 手機直向不溢出 ──
 check(!(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), 'iPhone 直向無橫向溢出');

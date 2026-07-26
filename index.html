@@ -89,11 +89,21 @@
   .screw.hint{outline:3px solid #fff;outline-offset:2px}
   .screw.gone{opacity:0;transform:scale(.3)}
   /* 擔子:一被某個顏色佔用,整個框就換成那個顏色(和上面的橛子一眼對得起來) */
+  /* 托盤(backport 自 ezra 0726):放不進擔子的橛子先擱這;同色擔子一開就自動歸位 */
+  .trayrow{display:flex;gap:8px;align-items:center;justify-content:center}
+  .traylabel{font-size:12px;color:var(--dim);white-space:nowrap}
+  .tray{display:flex;gap:6px}
+  .tray .tslot{width:34px;height:34px;border-radius:50%;border:2px dashed var(--line);background:#1c150f;display:grid;place-items:center}
+  .tray .tslot i{width:24px;height:24px;border-radius:50%;border:2px solid rgba(0,0,0,.5);display:block}
   .bins{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
   .bin{flex:1;min-width:62px;max-width:118px;height:62px;border:3px dashed var(--line);border-radius:12px;
     display:flex;align-items:center;justify-content:center;gap:6px;background:#1c150f;
     transition:border-color .2s ease,background-color .2s ease}
   .bin.taken{border-style:solid}
+  /* ★ 抬走動畫(backport 自 ezra;0727 使用者拍板:往右抬走一段距離,不要往上):
+     滿三根同色=利未人扛走——整擔往右移+淡出,tap() 0.7s 後重畫成空擔;reduced-motion 全域關。 */
+  @keyframes carryAway{to{transform:translateX(76px) rotate(2deg);opacity:0}}
+  .bin.carried{animation:carryAway .65s ease-in forwards;pointer-events:none}
   .slot{width:22px;height:22px;border-radius:50%;background:#2c2318;border:2px solid rgba(0,0,0,.35)}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .grow{flex:1}
@@ -122,7 +132,9 @@
     box-shadow:0 3px 0 rgba(70,100,40,.35);transition:transform .12s ease}
   /* ★ 首頁滿版(使用者:選單太小、擠最上方):.wrap 本來就是 100dvh 直欄,
      讓年齡畫面吃掉剩餘高度並垂直置中;按鈕加大到後排孩子也看得清。 */
-  #ageScreen{flex:1;display:flex;flex-direction:column;justify-content:center}
+  /* ⚠ display:flex 是作者樣式,會蓋過 hidden 屬性的 UA display:none —— 一定要 :not([hidden]),
+     不然進地圖/進關後年齡選單永遠黏在頁面最上方(0727 使用者回報,ezra 同款修法)。 */
+  #ageScreen:not([hidden]){flex:1;display:flex;flex-direction:column;justify-content:center}
   #ageScreen .age{min-height:128px;padding:18px 12px;border-radius:20px}
   #ageScreen .age b{font-size:28px}
   #ageScreen .age small{font-size:14px;margin-top:6px}
@@ -189,7 +201,8 @@
     <p class="verse"><b id="ref"></b> <span id="verse"></span>
       <button class="btn sm" id="readVerse" style="margin-left:6px">🔊 唸經文</button></p>
     <div class="stage" id="stage"></div>
-    <div class="bins" id="bins" style="margin-top:10px"></div>
+    <div class="trayrow" style="margin-top:10px"><span class="traylabel">🧺 托盤</span><div class="tray" id="tray"></div></div>
+    <div class="bins" id="bins" style="margin-top:8px"></div>
     <p class="msg" id="msg"></p>
     <div class="row">
       <button class="btn" id="hint">💡 提示</button>
@@ -212,7 +225,7 @@
 </dialog>
 
 <script type="module">
-import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor } from './levels.js';
+import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, AGE_PREF_KEY, getAge, binsFor, trayFor } from './levels.js';
 import { indexLevel, initState, isExposed, exposedScrews, removeScrew, isWon, isStuck,
          cloneState, stateKey, BIN_SIZE, pointInPoly as isInPoly } from './rules.js';
 import { speak, stopSpeak, voiceOn, setVoiceOn, verseLine } from './tts.js';
@@ -227,10 +240,11 @@ const $ = (id) => document.getElementById(id);
 const LS_DONE = 'tabernacle-screw-cleared';   // 已通關的關卡 id(陣列)
 const LS_UNLOCK = 'tabernacle-screw-unlock';  // 老師全部解鎖
 const LS_STARS = 'tabernacle-screw-stars';    // 每站幾顆星(照 tsum 七款:地圖上看得到 ★★★)
-const HOWTO = '把橛子一根一根拔下來,放進下面的擔子。上面還有東西壓著的,要先把上面的拆掉。同一個擔子裝滿三根一樣顏色的,利未人就扛走了。';
+const HOWTO = '把橛子一根一根拔下來,放進下面的擔子。上面還有東西壓著的,要先把上面的拆掉。同一個擔子裝滿三根一樣顏色的,利未人就扛走了。放不進擔子的,可以先擱在托盤,等同色的擔子開了會自動歸位。';
 
 let ageId = 'kids', cleared = new Set(), allUnlocked = false, stars = {};
 let li = 0, level, idx, state, hintId = null, howtoSpoken = false, fallingId = null;
+let carriedBins = [];   // 這一拔被扛走的擔子 [{i,color}] —— 抬走動畫演完(0.7s)就清空重畫
 // 這一次挑戰用了幾次提示、重來幾次 → 決定星星(從地圖進站時歸零,按「重來」不歸零)
 let attempt = { hints: 0, retries: 0 };
 
@@ -314,8 +328,8 @@ function load(i, fresh = true) {
   if (fresh) attempt = { hints: 0, retries: 0 };
   li = i; level = LEVELS[i]; idx = indexLevel(level);
   setTrack(level.id);   // ★ 每一關不同曲(BGM 百曲庫:同一關永遠同一首)
-  state = initState(level, binsFor(level, ageId));
-  hintId = null; fallingId = null;
+  state = initState(level, binsFor(level, ageId), trayFor(ageId));
+  hintId = null; fallingId = null; carriedBins = [];
   $('ageScreen').hidden = true; $('mapScreen').hidden = true; $('gameScreen').hidden = false;
   $('title').textContent = level.name;
   $('ref').textContent = level.ref;
@@ -395,20 +409,32 @@ function draw() {
     if (!gone) el.onclick = () => tap(s.id, open);
     st.appendChild(el);
   }
-  drawBins();
+  drawBins(); drawTray();
   $('legend').innerHTML = Object.entries(COLORS)
     .map(([, c]) => `<span><i style="background:${c.hex}"></i>${c.name}(${c.tribe})</span>`).join('');
 }
 
+function drawTray() {
+  const t = state.tray || { cap: 0, items: [] };
+  $('tray').parentElement.style.display = t.cap ? '' : 'none';
+  $('tray').innerHTML = Array.from({ length: t.cap }, (_, i) => {
+    const c = t.items[i] ? COLORS[t.items[i]] : null;
+    return `<span class="tslot" title="${c ? c.name + '(等同色擔子開)' : '托盤空位'}">${c ? `<i style="background:${c.hex};border-color:${c.dark}"></i>` : ''}</span>`;
+  }).join('');
+}
+
 function drawBins() {
-  $('bins').innerHTML = state.bins.map((b) => {
-    const c = b ? COLORS[b.color] : null;
+  $('bins').innerHTML = state.bins.map((b, bi) => {
+    // 扛走中的擔:state 已是 null,畫面上先畫成「滿三根」再演往右扛走(carried)
+    const carry = !b && carriedBins.find((x) => x.i === bi);   // 動畫未完就被重新佔用 → 以新擔為準,不再演
+    const eff = b || (carry ? { color: carry.color, count: BIN_SIZE } : null);
+    const c = eff ? COLORS[eff.color] : null;
     const slots = Array.from({ length: BIN_SIZE }, (_, i) =>
-      `<span class="slot" style="${b && i < b.count ? `background:${c.hex};border-color:${c.dark}` : ''}"></span>`).join('');
+      `<span class="slot" style="${eff && i < eff.count ? `background:${c.hex};border-color:${c.dark}` : ''}"></span>`).join('');
     // 擔子被某個顏色佔用時,整個框換成那個顏色 → 和上面的橛子一眼對得起來
     const style = c ? `border-color:${c.hex};background:${c.dark}33` : '';
     const label = c ? ` title="${c.tribe}的擔子:${c.name}"` : ' title="空擔子"';
-    return `<div class="bin${b ? ' taken' : ''}" style="${style}"${label}>${slots}</div>`;
+    return `<div class="bin${eff ? ' taken' : ''}${carry ? ' carried' : ''}" style="${style}"${label}>${slots}</div>`;
   }).join('');
 }
 
@@ -418,15 +444,20 @@ function tap(id, open) {
   const before = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);   // 音效用:扛走=總數變少
   const r = removeScrew(idx, state, id);
   fallingId = r.boardCleared || null;   // 這一拔讓哪片板子掉了 → 給掉落動畫用
-  if (!r.ok) { draw(); return lose('擔子都塞滿了不同顏色,再也放不下——這就是「按名指定」的意思(民 4:32)。'); }
+  // 拒絕制(backport 自 ezra,使用者拍板):點到放不進的=溫柔擋下,不判輸;真卡死由 isStuck 統一判
+  if (!r.ok) { sfx.locked(); say('這根現在放不進擔子、托盤也滿了——先拔放得進的。', 'bad'); return; }
   const after = state.bins.reduce((n, b) => n + (b ? b.count : 0), 0);
   if (after < before) sfx.carry();      // 滿三根同色,利未人扛走了
   else sfx.pull();
+  if (r.toTray) say('放不進擔子,先擱托盤——同色的擔子一開就會自動歸位。', '');
   if (r.boardCleared) sfx.fall();
+  // 抬走動畫(0727 拍板往右):flushTray 清的擔也走同一條路(clearedBins 已含)
+  carriedBins = r.clearedBins || [];
   draw();
   fallingId = null;   // 動畫已排程,清掉免得下次重畫又演一次
+  if (carriedBins.length) setTimeout(() => { carriedBins = []; if (state) drawBins(); }, 700);
   if (isWon(state)) return win();
-  if (isStuck(idx, state)) return lose('沒有一根拔得出來了。');
+  if (isStuck(idx, state)) return lose('沒有一根拔得動了——擔子和托盤都滿。「按名指定」(民 4:32):看準了才拔!');
   say('', '');
 }
 

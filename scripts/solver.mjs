@@ -9,10 +9,10 @@
 //   node scripts/solver.mjs             # lint + 逐關求解,任何一關不可解就 exit 1
 //   node scripts/solver.mjs --path      # 順便印出每關的一組通關順序
 //   node scripts/solver.mjs --level veil
-import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, binsFor } from '../levels.js';
+import { LEVELS, LAYOUT_ERRORS, COLORS, AGE, binsFor, trayFor } from '../levels.js';
 import { tightestSpacing, colorsOf, L } from '../layout.js';
 import { pointInPoly } from '../rules.js';
-import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey } from '../rules.js';
+import { BIN_SIZE, indexLevel, initState, exposedScrews, removeScrew, isWon, cloneState, stateKey, canPlace } from '../rules.js';
 
 const args = process.argv.slice(2);
 const WANT_PATH = args.includes('--path');
@@ -56,7 +56,7 @@ function lint(level) {
 }
 
 // ── solver:DFS + 記憶化,窮舉「先拔哪一根」的所有順序 ──
-function solve(level, bins) {
+function solve(level, bins, tray) {
   const idx = indexLevel(level);
   const seen = new Set();
   let nodes = 0, budgetHit = false;
@@ -77,7 +77,7 @@ function solve(level, bins) {
     return null;
   }
 
-  const path = dfs(initState(level, bins), []);
+  const path = dfs(initState(level, bins, tray), []);
   return { path, nodes, budgetHit };
 }
 
@@ -90,25 +90,28 @@ function solve(level, bins) {
 //                    → 逼近「一個會想一下的孩子」
 // ★ 只看 random 會系統性高估難度(第一版就是這樣把 55% 誤判成「太緊」)。
 //   真正的出廠標準是:會想 bot 幾乎一定過(不勸退),而躺平 bot 會吃到苦頭(有挑戰)。
-function playout(level, idx, pickFn, bins) {
-  const st = initState(level, bins);
+function playout(level, idx, pickFn, bins, tray) {
+  const st = initState(level, bins, tray);
   for (;;) {
     if (isWon(st)) return true;
-    const ex = exposedScrews(idx, st);
+    // ★ 拒絕制語意(2026-07-26 帶重校):點到放不進的器皿只是被擋、不算輸——
+    //   bot 也只從「拔得出且放得進」的裡面挑;真卡死=一根都挑不出(與遊戲 isStuck 同語意)。
+    //   舊制(點錯即死)會系統性高估卡死率,拒絕制上線後量出來的帶全是虛胖。
+    const ex = exposedScrews(idx, st).filter((id) => canPlace(st, idx.screw.get(id).color));
     if (!ex.length) return false;
     const res = removeScrew(idx, st, pickFn(ex, st, idx));
     if (!res.ok) return false;
   }
 }
 
-function difficulty(level, bins, runs = 400) {
+function difficulty(level, bins, tray, runs = 400) {
   const idx = indexLevel(level);
   let seed = 20260725; // 固定種子:每次跑同一組數字,才能當迴歸基準
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
 
   let randomStuck = 0;
   for (let r = 0; r < runs; r++)
-    if (!playout(level, idx, (ex) => ex[Math.floor(rnd() * ex.length) % ex.length], bins)) randomStuck++;
+    if (!playout(level, idx, (ex) => ex[Math.floor(rnd() * ex.length) % ex.length], bins, tray)) randomStuck++;
 
   let greedyStuck = 0;
   for (let r = 0; r < runs; r++) {
@@ -116,7 +119,7 @@ function difficulty(level, bins, runs = 400) {
       const open = ex.filter((id) => st.bins.some((b) => b && b.color === idx.screw.get(id).color));
       const pool = open.length ? open : ex;
       return pool[Math.floor(rnd() * pool.length) % pool.length];
-    }, bins);
+    }, bins, tray);
     if (!ok) greedyStuck++;
   }
   return { random: randomStuck / runs, greedy: greedyStuck / runs };
@@ -129,8 +132,11 @@ function difficulty(level, bins, runs = 400) {
 //     兒童:會想 ≤25%(多一個擔子好轉身)   幼稚園:會想 ≤10%(幾乎不該卡)
 //   教學關(level.teaching)例外:它的任務是教規則,0% 卡死是對的。
 // 0726 使用者玩過堆疊第一版後點名「還要再加難度」→ 帶整段上移(gen-pile.mjs 同步)
+// ★ 0726 帶重校(拒絕制語意):bot 只挑「放得進」的之後,躺平≈會想(過濾本身就是遊戲把關),
+//   randMin 0.5 是「點錯即死」時代的殘留 → 降為 0.25 當「這關真的有次序考驗」的地板;
+//   會想 30~55% 續用——新語意下這代表「真卡死」率,想一下也常失手,正是要的手感。
 const BAND = {
-  teen:   { max: 0.55, min: 0.30, randMin: 0.5, why: '青少年' },
+  teen:   { max: 0.55, min: 0.30, randMin: 0.25, why: '青少年' },
   kids:   { max: 0.30, min: 0,    randMin: 0,   why: '兒童' },
   kinder: { max: 0.10, min: 0,    randMin: 0,   why: '幼稚園' },
 };
@@ -167,12 +173,13 @@ for (const level of levels) {
   // ★ 三個年齡檔各驗一次:孩子選哪一檔都不能卡死(擔子數不同=完全不同的局)
   for (const age of Object.values(AGE)) {
     const bins = binsFor(level, age.id);
-    const { path, nodes, budgetHit } = solve(level, bins);
+    const tray = trayFor(age.id);
+    const { path, nodes, budgetHit } = solve(level, bins, tray);
     const tag = `${age.emoji} ${age.label}(擔子 ${bins})`;
     if (path) {
       console.log(`   🟢 ${tag} 保證可解(${path.length} 步 / 搜 ${nodes.toLocaleString()} 狀態)`);
       if (WANT_PATH) console.log(`      順序:${path.join(' → ')}`);
-      const v = difficultyVerdict(age.id, difficulty(level, bins), level.teaching, level.teenMin);
+      const v = difficultyVerdict(age.id, difficulty(level, bins, tray), level.teaching, level.teenMin);
       console.log(`      難度:${v.line}`);
       if (!v.ok) bad++;                      // ★ 難度出帶也算出廠不合格(不只是印個字)
     } else if (budgetHit) {
